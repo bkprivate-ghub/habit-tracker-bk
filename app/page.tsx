@@ -3,9 +3,11 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from './lib/supabase'
+import { calculateStreak } from './lib/streak'
 
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([])
+  const [streaks, setStreaks] = useState<Record<string, { current: number, longest: number }>>({})
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newHabitName, setNewHabitName] = useState('')
@@ -14,7 +16,6 @@ export default function Home() {
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
 
-  // Fix: Set greeting on client side only
   useEffect(() => {
     const hour = new Date().getHours()
     let g = 'Good Evening'
@@ -23,7 +24,6 @@ export default function Home() {
     setGreeting(g)
   }, [])
 
-  // Load habits from database
   useEffect(() => {
     loadHabits()
   }, [])
@@ -37,39 +37,64 @@ export default function Home() {
     
     if (error) {
       console.error('Error loading habits:', error)
-    } else if (data && data.length > 0) {
+    } else if (data) {
       setHabits(data)
-    } else {
-      await createDefaultHabits()
+      // Load streaks for each habit
+      await loadStreaks(data)
     }
     setLoading(false)
   }
 
-  const createDefaultHabits = async () => {
-    const defaults = [
-      { name: '📚 Reading' },
-      { name: '💪 Workout' },
-      { name: '📝 Journal' },
-      { name: '🧴 Skincare' },
-      { name: '💼 Business Skillset' },
-    ]
+  const loadStreaks = async (habitsData: any[]) => {
+    const today = new Date().toISOString().split('T')[0]
+    const streakData: Record<string, { current: number, longest: number }> = {}
     
-    for (const habit of defaults) {
-      await supabase.from('habits').insert([{ name: habit.name, done: false }])
+    for (const habit of habitsData) {
+      // Get entries for this habit
+      const { data: entries } = await supabase
+        .from('daily_entries')
+        .select('*')
+        .eq('habit_id', habit.id)
+        .order('date', { ascending: false })
+        .limit(100) // Get last 100 entries
+      
+      if (entries) {
+        const streak = calculateStreak(entries)
+        streakData[habit.id] = streak
+      } else {
+        streakData[habit.id] = { current: 0, longest: 0 }
+      }
     }
-    loadHabits()
+    setStreaks(streakData)
   }
 
   const toggleHabit = async (id: string, currentDone: boolean) => {
+    const today = new Date().toISOString().split('T')[0]
+    
+    // Update habit status
     const { error } = await supabase
       .from('habits')
       .update({ done: !currentDone })
       .eq('id', id)
     
     if (!error) {
+      // Record daily entry
+      const status = !currentDone ? 'completed' : 'pending'
+      await supabase
+        .from('daily_entries')
+        .upsert({
+          habit_id: id,
+          date: today,
+          status: status,
+          completed_at: !currentDone ? new Date().toISOString() : null
+        })
+      
       setHabits(habits.map(h => 
         h.id === id ? { ...h, done: !h.done } : h
       ))
+      
+      // Refresh streaks
+      await loadStreaks(habits)
     }
   }
 
@@ -86,6 +111,7 @@ export default function Home() {
       setHabits([...habits, data[0]])
       setNewHabitName('')
       setShowAddForm(false)
+      await loadStreaks([...habits, data[0]])
     }
   }
 
@@ -126,6 +152,7 @@ export default function Home() {
           </Link>
         </div>
 
+        {/* Progress Ring */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-6 flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">Today's Progress</p>
@@ -151,6 +178,7 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Stats with Streaks */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-white p-3 rounded-xl shadow text-center">
             <div className="text-2xl font-bold text-green-500">{completed}</div>
@@ -163,29 +191,43 @@ export default function Home() {
             <div className="text-xs text-gray-500">Remaining</div>
           </div>
           <div className="bg-white p-3 rounded-xl shadow text-center">
-            <div className="text-2xl font-bold text-blue-500">0</div>
+            <div className="text-2xl font-bold text-orange-500">
+              🔥
+            </div>
             <div className="text-xs text-gray-500">Streak</div>
           </div>
         </div>
 
+        {/* Today's Habits with Streaks */}
         <h2 className="text-sm font-semibold text-gray-600 mb-3">Today's Habits</h2>
         
-        {habits.map((habit) => (
-          <div 
-            key={habit.id}
-            onClick={() => toggleHabit(habit.id, habit.done)}
-            className={`bg-white p-4 rounded-xl shadow mb-2 border-l-4 transition-all cursor-pointer
-              ${habit.done ? 'border-green-500 bg-green-50/50' : 'border-blue-500'}`}
-          >
-            <div className="flex items-center justify-between">
-              <span className={`${habit.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                {habit.name}
-              </span>
-              <span className="text-xl">{habit.done ? '✅' : '◻️'}</span>
+        {habits.map((habit) => {
+          const streak = streaks[habit.id] || { current: 0, longest: 0 }
+          return (
+            <div 
+              key={habit.id}
+              onClick={() => toggleHabit(habit.id, habit.done)}
+              className={`bg-white p-4 rounded-xl shadow mb-2 border-l-4 transition-all cursor-pointer
+                ${habit.done ? 'border-green-500 bg-green-50/50' : 'border-blue-500'}`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className={`${habit.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                    {habit.name}
+                  </span>
+                  {streak.current > 0 && (
+                    <span className="ml-2 text-xs text-orange-500 font-medium">
+                      🔥 {streak.current}d
+                    </span>
+                  )}
+                </div>
+                <span className="text-xl">{habit.done ? '✅' : '◻️'}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
 
+        {/* Add Habit Button */}
         {!showAddForm ? (
           <button 
             onClick={() => setShowAddForm(true)}
