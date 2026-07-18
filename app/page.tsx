@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 
 export default function Home() {
   const [habits, setHabits] = useState([
@@ -39,13 +40,11 @@ export default function Home() {
   const completed = habits.filter(h => h.done).length
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
 
-  // Get greeting based on time
   const hour = new Date().getHours()
   let greeting = 'Good Evening'
   if (hour < 12) greeting = 'Good Morning'
   else if (hour < 17) greeting = 'Good Afternoon'
 
-  // Format date
   const today = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
     month: 'long', 
@@ -56,12 +55,17 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 p-4 pb-20">
       <div className="max-w-md mx-auto">
         
-        {/* Header with Greeting */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">
-            {greeting}, Bharath K 👋
-          </h1>
-          <p className="text-gray-500 text-sm">{today}</p>
+        {/* Header with Greeting and Settings */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {greeting}, Bharath K 👋
+            </h1>
+            <p className="text-gray-500 text-sm">{today}</p>
+          </div>
+          <Link href="/settings" className="text-2xl p-2 hover:bg-gray-200 rounded-full transition">
+            ⚙️
+          </Link>
         </div>
 
         {/* Progress Ring */}
@@ -108,7 +112,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Today's Habits - Clean Design */}
+        {/* Today's Habits */}
         <h2 className="text-sm font-semibold text-gray-600 mb-3">Today's Habits</h2>
         
         {habits.map((habit) => (
