@@ -1,20 +1,34 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { supabase } from '../lib/supabase'
 
 export default function Settings() {
-  const [habits, setHabits] = useState([
-    { id: 1, name: '📚 Reading', done: false },
-    { id: 2, name: '💪 Workout', done: false },
-    { id: 3, name: '📝 Journal', done: false },
-    { id: 4, name: '🧴 Skincare', done: false },
-    { id: 5, name: '💼 Business Skillset', done: false },
-  ])
+  const [habits, setHabits] = useState<any[]>([])
 
-  const deleteHabit = (id: number) => {
+  useEffect(() => {
+    loadHabits()
+  }, [])
+
+  const loadHabits = async () => {
+    const { data } = await supabase
+      .from('habits')
+      .select('*')
+      .order('created_at', { ascending: true })
+    if (data) setHabits(data)
+  }
+
+  const deleteHabit = async (id: string) => {
     if (confirm('Delete this habit permanently?')) {
-      setHabits(habits.filter(h => h.id !== id))
+      const { error } = await supabase
+        .from('habits')
+        .delete()
+        .eq('id', id)
+      
+      if (!error) {
+        setHabits(habits.filter(h => h.id !== id))
+      }
     }
   }
 
@@ -27,7 +41,6 @@ export default function Settings() {
         
         <h1 className="text-2xl font-bold text-gray-800 mb-6">⚙️ Settings</h1>
 
-        {/* Manage Habits */}
         <div className="bg-white rounded-2xl p-4 shadow mb-4">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Manage Habits</h2>
           <p className="text-xs text-gray-400 mb-4">Delete habits you no longer track</p>
@@ -45,18 +58,6 @@ export default function Settings() {
           ))}
         </div>
 
-        {/* Appearance */}
-        <div className="bg-white rounded-2xl p-4 shadow mb-4">
-          <h2 className="text-sm font-semibold text-gray-600 mb-3">Appearance</h2>
-          <button className="w-full py-3 text-left px-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-3">
-            🌙 Dark Mode
-          </button>
-          <button className="w-full py-3 text-left px-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-3">
-            ☀️ Light Mode
-          </button>
-        </div>
-
-        {/* Account */}
         <div className="bg-white rounded-2xl p-4 shadow">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Account</h2>
           <div className="py-2 px-3">
