@@ -4,7 +4,6 @@ import { useState } from 'react'
 import Link from 'next/link'
 
 export default function Settings() {
-  // This would connect to your habits state
   const [habits, setHabits] = useState([
     { id: 1, name: '📚 Reading', done: false },
     { id: 2, name: '💪 Workout', done: false },
@@ -26,14 +25,15 @@ export default function Settings() {
           ← Back to Dashboard
         </Link>
         
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">⚙️ Settings</h1>
 
-        <div className="bg-white rounded-2xl p-4 shadow">
+        {/* Manage Habits */}
+        <div className="bg-white rounded-2xl p-4 shadow mb-4">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Manage Habits</h2>
           <p className="text-xs text-gray-400 mb-4">Delete habits you no longer track</p>
           
           {habits.map((habit) => (
-            <div key={habit.id} className="flex items-center justify-between py-3 border-b border-gray-100">
+            <div key={habit.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
               <span className="text-gray-700">{habit.name}</span>
               <button
                 onClick={() => deleteHabit(habit.id)}
@@ -45,14 +45,24 @@ export default function Settings() {
           ))}
         </div>
 
-        <div className="mt-6 bg-white rounded-2xl p-4 shadow">
+        {/* Appearance */}
+        <div className="bg-white rounded-2xl p-4 shadow mb-4">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">Appearance</h2>
-          <button className="w-full py-2 text-left px-3 rounded-lg hover:bg-gray-50 transition">
+          <button className="w-full py-3 text-left px-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-3">
             🌙 Dark Mode
           </button>
-          <button className="w-full py-2 text-left px-3 rounded-lg hover:bg-gray-50 transition">
+          <button className="w-full py-3 text-left px-3 rounded-lg hover:bg-gray-50 transition flex items-center gap-3">
             ☀️ Light Mode
           </button>
+        </div>
+
+        {/* Account */}
+        <div className="bg-white rounded-2xl p-4 shadow">
+          <h2 className="text-sm font-semibold text-gray-600 mb-3">Account</h2>
+          <div className="py-2 px-3">
+            <p className="text-sm text-gray-700">👤 Bharath K</p>
+            <p className="text-xs text-gray-400">Member since July 2025</p>
+          </div>
         </div>
       </div>
     </div>
