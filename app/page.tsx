@@ -1,39 +1,86 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { supabase } from './lib/supabase'
 
 export default function Home() {
-  const [habits, setHabits] = useState([
-    { id: 1, name: '📚 Reading', done: false },
-    { id: 2, name: '💪 Workout', done: false },
-    { id: 3, name: '📝 Journal', done: false },
-    { id: 4, name: '🧴 Skincare', done: false },
-    { id: 5, name: '💼 Business Skillset', done: false },
-  ])
-
+  const [habits, setHabits] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newHabitName, setNewHabitName] = useState('')
   const [selectedEmoji, setSelectedEmoji] = useState('📚')
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
 
-  const toggleHabit = (id: number) => {
-    setHabits(habits.map(h => 
-      h.id === id ? { ...h, done: !h.done } : h
-    ))
+  useEffect(() => {
+    loadHabits()
+  }, [])
+
+  const loadHabits = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('habits')
+      .select('*')
+      .order('created_at', { ascending: true })
+    
+    if (error) {
+      console.error('Error loading habits:', error)
+      // If table doesn't exist, create default
+      if (error.message.includes('relation "habits" does not exist')) {
+        console.log('Table not found - create it in Supabase SQL editor first')
+      }
+    } else if (data && data.length > 0) {
+      setHabits(data)
+    } else {
+      // Create default habits if empty
+      await createDefaultHabits()
+    }
+    setLoading(false)
   }
 
-  const addHabit = () => {
-    if (newHabitName.trim() === '') return
-    const newHabit = {
-      id: Date.now(),
-      name: `${selectedEmoji} ${newHabitName}`,
-      done: false
+  const createDefaultHabits = async () => {
+    const defaults = [
+      { name: '📚 Reading' },
+      { name: '💪 Workout' },
+      { name: '📝 Journal' },
+      { name: '🧴 Skincare' },
+      { name: '💼 Business Skillset' },
+    ]
+    
+    for (const habit of defaults) {
+      await supabase.from('habits').insert([{ name: habit.name, done: false }])
     }
-    setHabits([...habits, newHabit])
-    setNewHabitName('')
-    setShowAddForm(false)
+    loadHabits()
+  }
+
+  const toggleHabit = async (id: string, currentDone: boolean) => {
+    const { error } = await supabase
+      .from('habits')
+      .update({ done: !currentDone })
+      .eq('id', id)
+    
+    if (!error) {
+      setHabits(habits.map(h => 
+        h.id === id ? { ...h, done: !h.done } : h
+      ))
+    }
+  }
+
+  const addHabit = async () => {
+    if (newHabitName.trim() === '') return
+    const fullName = `${selectedEmoji} ${newHabitName}`
+    
+    const { data, error } = await supabase
+      .from('habits')
+      .insert([{ name: fullName, done: false }])
+      .select()
+    
+    if (!error && data) {
+      setHabits([...habits, data[0]])
+      setNewHabitName('')
+      setShowAddForm(false)
+    }
   }
 
   const total = habits.length
@@ -51,11 +98,21 @@ export default function Home() {
     day: 'numeric' 
   })
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">⏳</div>
+          <p className="text-gray-500">Loading your habits...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 pb-20">
       <div className="max-w-md mx-auto">
         
-        {/* Header with Greeting and Settings */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
@@ -68,7 +125,6 @@ export default function Home() {
           </Link>
         </div>
 
-        {/* Progress Ring */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-6 flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">Today's Progress</p>
@@ -94,7 +150,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Quick Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-white p-3 rounded-xl shadow text-center">
             <div className="text-2xl font-bold text-green-500">{completed}</div>
@@ -112,13 +167,12 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Today's Habits */}
         <h2 className="text-sm font-semibold text-gray-600 mb-3">Today's Habits</h2>
         
         {habits.map((habit) => (
           <div 
             key={habit.id}
-            onClick={() => toggleHabit(habit.id)}
+            onClick={() => toggleHabit(habit.id, habit.done)}
             className={`bg-white p-4 rounded-xl shadow mb-2 border-l-4 transition-all cursor-pointer
               ${habit.done ? 'border-green-500 bg-green-50/50' : 'border-blue-500'}`}
           >
@@ -131,7 +185,6 @@ export default function Home() {
           </div>
         ))}
 
-        {/* Add Habit Button */}
         {!showAddForm ? (
           <button 
             onClick={() => setShowAddForm(true)}
