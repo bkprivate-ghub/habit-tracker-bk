@@ -10,9 +10,20 @@ export default function Home() {
   const [showAddForm, setShowAddForm] = useState(false)
   const [newHabitName, setNewHabitName] = useState('')
   const [selectedEmoji, setSelectedEmoji] = useState('📚')
+  const [greeting, setGreeting] = useState('')
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
 
+  // Fix: Set greeting on client side only
+  useEffect(() => {
+    const hour = new Date().getHours()
+    let g = 'Good Evening'
+    if (hour < 12) g = 'Good Morning'
+    else if (hour < 17) g = 'Good Afternoon'
+    setGreeting(g)
+  }, [])
+
+  // Load habits from database
   useEffect(() => {
     loadHabits()
   }, [])
@@ -26,14 +37,9 @@ export default function Home() {
     
     if (error) {
       console.error('Error loading habits:', error)
-      // If table doesn't exist, create default
-      if (error.message.includes('relation "habits" does not exist')) {
-        console.log('Table not found - create it in Supabase SQL editor first')
-      }
     } else if (data && data.length > 0) {
       setHabits(data)
     } else {
-      // Create default habits if empty
       await createDefaultHabits()
     }
     setLoading(false)
@@ -87,11 +93,6 @@ export default function Home() {
   const completed = habits.filter(h => h.done).length
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
 
-  const hour = new Date().getHours()
-  let greeting = 'Good Evening'
-  if (hour < 12) greeting = 'Good Morning'
-  else if (hour < 17) greeting = 'Good Afternoon'
-
   const today = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
     month: 'long', 
@@ -116,7 +117,7 @@ export default function Home() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">
-              {greeting}, Bharath K 👋
+              {greeting || 'Hello'}, Bharath K 👋
             </h1>
             <p className="text-gray-500 text-sm">{today}</p>
           </div>
