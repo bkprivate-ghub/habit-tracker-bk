@@ -21,6 +21,13 @@ export default function Settings() {
 
   const deleteHabit = async (id: string) => {
     if (confirm('Delete this habit permanently?')) {
+      // Delete daily entries first
+      await supabase
+        .from('daily_entries')
+        .delete()
+        .eq('habit_id', id)
+      
+      // Then delete the habit
       const { error } = await supabase
         .from('habits')
         .delete()
