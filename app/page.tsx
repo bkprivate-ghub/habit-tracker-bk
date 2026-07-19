@@ -38,7 +38,6 @@ export default function Home() {
     if (habitsData) {
       setHabits(habitsData)
       
-      // Load last 30 days of entries
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
@@ -66,13 +65,10 @@ export default function Home() {
       
       let streak = 0
       let checkDate = new Date()
-      
-      // Check today first
       const todayStr = checkDate.toISOString().split('T')[0]
       const todayEntry = habitEntries.find(e => e.date === todayStr)
       
       if (!todayEntry) {
-        // If today not completed, check if yesterday was
         const yesterday = new Date()
         yesterday.setDate(yesterday.getDate() - 1)
         const yesterdayStr = yesterday.toISOString().split('T')[0]
@@ -85,11 +81,9 @@ export default function Home() {
         checkDate = yesterday
       }
       
-      // Count consecutive days
       for (let i = 0; i < 30; i++) {
         const dateStr = checkDate.toISOString().split('T')[0]
         const entry = habitEntries.find(e => e.date === dateStr)
-        
         if (entry) {
           streak++
         } else {
@@ -111,7 +105,6 @@ export default function Home() {
     const isDone = existing?.status === 'completed'
     const newStatus = isDone ? 'pending' : 'completed'
     
-    // Update UI immediately
     const updatedEntries = [...dailyEntries]
     const existingIndex = updatedEntries.findIndex(e => e.habit_id === habitId && e.date === today)
     
@@ -123,7 +116,6 @@ export default function Home() {
     
     setDailyEntries(updatedEntries)
     
-    // Recalculate streak for this habit
     const habitEntries = updatedEntries
       .filter(e => e.habit_id === habitId && e.status === 'completed')
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -148,7 +140,6 @@ export default function Home() {
     
     setStreaks(prev => ({ ...prev, [habitId]: streak }))
     
-    // Sync to database
     try {
       await supabase
         .from('daily_entries')
@@ -203,7 +194,6 @@ export default function Home() {
   const completed = habits.filter(h => getIsDone(h.id)).length
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
   
-  // Get best streak
   const bestStreak = Math.max(...Object.values(streaks), 0)
   const activeStreaks = Object.values(streaks).filter(s => s > 0).length
 
@@ -235,9 +225,14 @@ export default function Home() {
             </h1>
             <p className="text-gray-500 text-sm">{dateDisplay}</p>
           </div>
-          <Link href="/settings" className="text-2xl p-2 hover:bg-gray-200 rounded-full transition">
-            ⚙️
-          </Link>
+          <div className="flex gap-2">
+            <Link href="/analytics" className="text-2xl p-2 hover:bg-gray-200 rounded-full transition">
+              📊
+            </Link>
+            <Link href="/settings" className="text-2xl p-2 hover:bg-gray-200 rounded-full transition">
+              ⚙️
+            </Link>
+          </div>
         </div>
 
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-6 flex items-center justify-between">
@@ -282,7 +277,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Best Streak Card */}
         {bestStreak > 0 && (
           <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-4 mb-4 flex items-center justify-between">
             <div>
