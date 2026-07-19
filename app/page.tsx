@@ -18,6 +18,9 @@ export default function Home() {
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
   const today = new Date().toISOString().split('T')[0]
 
+  // Define the custom order for habits
+  const habitOrder = ['Workout', 'Reading', 'Journal', 'Business Skillset', 'Skincare']
+
   useEffect(() => {
     const hour = new Date().getHours()
     let g = 'Good Evening'
@@ -36,7 +39,9 @@ export default function Home() {
       .order('created_at', { ascending: true })
     
     if (habitsData) {
-      setHabits(habitsData)
+      // Sort habits in custom order
+      const sortedHabits = sortHabitsByOrder(habitsData)
+      setHabits(sortedHabits)
       
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
@@ -49,10 +54,43 @@ export default function Home() {
         .order('date', { ascending: false })
       
       setDailyEntries(entriesData || [])
-      calculateStreaks(entriesData || [], habitsData)
+      calculateStreaks(entriesData || [], sortedHabits)
     }
     
     setLoading(false)
+  }
+
+  // Function to sort habits by custom order
+  const sortHabitsByOrder = (habitsData: any[]) => {
+    return [...habitsData].sort((a, b) => {
+      // Extract the name without emoji for comparison
+      const getNameWithoutEmoji = (name: string) => {
+        // Remove emoji (first character if it's an emoji)
+        const firstChar = name.charAt(0)
+        // Check if it's an emoji (simple check)
+        if (/[\u{1F000}-\u{1FFFF}]/u.test(firstChar)) {
+          return name.substring(2).trim() // Remove emoji + space
+        }
+        return name.trim()
+      }
+
+      const nameA = getNameWithoutEmoji(a.name)
+      const nameB = getNameWithoutEmoji(b.name)
+      
+      const indexA = habitOrder.indexOf(nameA)
+      const indexB = habitOrder.indexOf(nameB)
+      
+      // If both are in the custom order, sort by that
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB
+      }
+      // If only A is in the custom order, A comes first
+      if (indexA !== -1) return -1
+      // If only B is in the custom order, B comes first
+      if (indexB !== -1) return 1
+      // Otherwise sort alphabetically
+      return nameA.localeCompare(nameB)
+    })
   }
 
   const calculateStreaks = (entries: any[], habitsData: any[]) => {
@@ -178,7 +216,9 @@ export default function Home() {
       .select()
     
     if (!error && data) {
-      setHabits([...habits, data[0]])
+      const updatedHabits = [...habits, data[0]]
+      const sortedHabits = sortHabitsByOrder(updatedHabits)
+      setHabits(sortedHabits)
       setNewHabitName('')
       setShowAddForm(false)
       await loadAllData()
@@ -381,7 +421,6 @@ export default function Home() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span className="text-2xl">{habit.name.split(' ')[0]}</span>
                     <div>
                       <span className={`font-medium ${isDone ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200'}`}>
                         {habit.name}
