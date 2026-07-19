@@ -141,7 +141,7 @@ export default function Calendar() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4 animate-pulse">📅</div>
+          <div className="text-4xl mb-4 animate-pulse">🗓️</div>
           <p className="text-gray-500">Loading calendar...</p>
         </div>
       </div>
@@ -157,7 +157,7 @@ export default function Calendar() {
             <Link href="/" className="text-blue-500 text-sm mb-1 inline-block">
               ← Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">📅 Calendar</h1>
+            <h1 className="text-2xl font-bold text-gray-800">🗓️ Calendar</h1>
           </div>
         </div>
 
