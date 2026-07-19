@@ -232,7 +232,7 @@ export default function Analytics() {
 
         {/* TODAY */}
         <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/50 mb-4">
-          <h2 className="text-sm font-semibold text-gray-600 mb-2">📅 Today</h2>
+          <h2 className="text-sm font-semibold text-gray-600 mb-2">🗓️ Today</h2>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-3xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
@@ -271,7 +271,7 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* WEEKLY - BEAUTIFUL BAR CHART */}
+        {/* WEEKLY - FIXED BAR CHART */}
         <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-white/50 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-600">📈 Weekly Progress</h2>
@@ -293,71 +293,71 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Bar Chart */}
-          <div className="flex items-end justify-between h-48 gap-1.5 mt-2">
+          {/* Bar Chart - FIXED with visible bars */}
+          <div className="flex items-end justify-between h-52 gap-1.5 mt-2 px-1">
             {weeklyData.map((day, i) => {
-              const height = day.percentage
+              // Calculate bar height based on percentage
+              const barHeight = day.hasEntries ? Math.max(day.percentage, 4) : 4
               const isToday = day.date === new Date().toISOString().split('T')[0]
               
+              // Determine bar color and label
               let barColor = 'bg-gray-200'
-              let labelColor = 'text-gray-400'
               let barLabel = '—'
+              let labelColor = 'text-gray-400'
               
               if (day.isFuture) {
                 barColor = 'bg-gray-100'
-                barLabel = '📅'
+                barLabel = '🗓️'
+                labelColor = 'text-gray-300'
               } else if (day.hasEntries) {
                 if (day.percentage === 100) {
-                  barColor = 'bg-gradient-to-t from-emerald-500 to-emerald-400'
+                  barColor = 'bg-emerald-500'
                   labelColor = 'text-emerald-600'
-                  barLabel = `${day.completed}/${day.total} ✅`
+                  barLabel = `✅ ${day.completed}/${day.total}`
                 } else if (day.percentage >= 50) {
-                  barColor = 'bg-gradient-to-t from-amber-500 to-amber-400'
+                  barColor = 'bg-amber-500'
                   labelColor = 'text-amber-600'
-                  barLabel = `${day.completed}/${day.total} 🟡`
+                  barLabel = `🟡 ${day.completed}/${day.total}`
                 } else if (day.percentage > 0) {
-                  barColor = 'bg-gradient-to-t from-orange-400 to-orange-300'
+                  barColor = 'bg-orange-400'
                   labelColor = 'text-orange-500'
-                  barLabel = `${day.completed}/${day.total} 🟠`
+                  barLabel = `🟠 ${day.completed}/${day.total}`
                 } else {
-                  barColor = 'bg-gradient-to-t from-rose-400 to-rose-300'
+                  barColor = 'bg-rose-400'
                   labelColor = 'text-rose-400'
-                  barLabel = `${day.completed}/${day.total} ❌`
+                  barLabel = `❌ ${day.completed}/${day.total}`
                 }
-              }
-              
-              if (!day.hasEntries && !day.isFuture) {
-                barColor = 'bg-gray-100'
-                barLabel = '—'
               }
 
               return (
-                <div key={i} className="flex-1 flex flex-col items-center">
-                  <div className="w-full relative" style={{ height: '100%' }}>
-                    {!day.isFuture && day.hasEntries ? (
-                      <div 
-                        className={`absolute bottom-0 w-full rounded-t-lg transition-all duration-500 ${barColor}`}
-                        style={{ height: `${Math.max(height, 4)}%` }}
-                      >
-                        {height > 20 && (
-                          <div className="absolute -top-5 w-full text-center text-[10px] font-bold text-gray-600">
-                            {height}%
-                          </div>
-                        )}
-                      </div>
-                    ) : day.isFuture ? (
-                      <div className="absolute bottom-0 w-full h-4 bg-gray-100 rounded-lg flex items-center justify-center">
-                        <span className="text-[10px] text-gray-400">📅</span>
-                      </div>
-                    ) : (
-                      <div className="absolute bottom-0 w-full h-2 bg-gray-100 rounded-full"></div>
-                    )}
-                    
-                    <div className="absolute bottom-0 w-full text-center text-[9px] font-medium -mb-4">
-                      {barLabel}
+                <div key={i} className="flex-1 flex flex-col items-center h-full">
+                  {/* Bar container */}
+                  <div className="w-full h-40 relative flex items-end">
+                    {/* Bar */}
+                    <div 
+                      className={`w-full rounded-t-lg transition-all duration-700 ease-out ${barColor}`}
+                      style={{ 
+                        height: `${barHeight}%`,
+                        minHeight: day.hasEntries ? '8px' : '4px',
+                        opacity: day.hasEntries || day.isFuture ? 1 : 0.3
+                      }}
+                    >
+                      {/* Percentage label inside bar */}
+                      {day.hasEntries && barHeight > 30 && (
+                        <div className="absolute -top-5 w-full text-center text-[11px] font-bold text-gray-700">
+                          {day.percentage}%
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <span className={`text-xs mt-5 font-medium ${isToday ? 'text-indigo-600 font-bold' : day.isFuture ? 'text-gray-300' : 'text-gray-600'}`}>
+                  
+                  {/* Bar label */}
+                  <div className={`text-[9px] font-medium mt-1 ${labelColor} h-3`}>
+                    {barLabel}
+                  </div>
+                  
+                  {/* Day label */}
+                  <span className={`text-xs font-medium mt-1 ${isToday ? 'text-indigo-600 font-bold' : day.isFuture ? 'text-gray-300' : 'text-gray-600'}`}>
                     {day.day}
                     {isToday && ' • Today'}
                   </span>
@@ -384,7 +384,7 @@ export default function Analytics() {
               <span className="w-3 h-3 bg-gray-200 rounded-full"></span> No Data
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-gray-100 rounded-full"></span> 📅 Future
+              <span className="w-3 h-3 bg-gray-100 rounded-full"></span> 🗓️ Future
             </span>
           </div>
         </div>
@@ -431,7 +431,7 @@ export default function Analytics() {
           </div>
           <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-white/50 text-center">
             <div className="text-2xl font-bold text-indigo-500">{weeklyData.filter(d => d.percentage === 100 && d.hasEntries).length}/7</div>
-            <div className="text-xs text-gray-500">📅 Perfect Days</div>
+            <div className="text-xs text-gray-500">🗓️ Perfect Days</div>
           </div>
         </div>
 
