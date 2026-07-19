@@ -15,6 +15,16 @@ export default function Analytics() {
     totalCompletions: 0,
     consistency: 0,
   })
+  const [motivation, setMotivation] = useState('')
+
+  const motivationalQuotes = [
+    { min: 0, max: 20, text: "💪 Every journey begins with a single step. Keep going!" },
+    { min: 21, max: 40, text: "🌱 Progress is progress, no matter how small. You're growing!" },
+    { min: 41, max: 60, text: "🔥 You're building momentum! Consistency is key!" },
+    { min: 61, max: 80, text: "⭐ Amazing work! You're building habits that last!" },
+    { min: 81, max: 90, text: "🏆 Incredible dedication! You're nearly at the top!" },
+    { min: 91, max: 100, text: "🌟 PERFECT SCORE! You're unstoppable! Keep this energy!" },
+  ]
 
   useEffect(() => {
     loadAnalytics()
@@ -23,7 +33,6 @@ export default function Analytics() {
   const loadAnalytics = async () => {
     setLoading(true)
 
-    // Get all habits
     const { data: habits } = await supabase
       .from('habits')
       .select('*')
@@ -36,7 +45,6 @@ export default function Analytics() {
     const totalHabits = habits.length
     const today = new Date().toISOString().split('T')[0]
 
-    // Get last 60 days of entries
     const sixtyDaysAgo = new Date()
     sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
     const sixtyDaysAgoStr = sixtyDaysAgo.toISOString().split('T')[0]
@@ -55,12 +63,12 @@ export default function Analytics() {
       entriesMap.get(e.date).push(e)
     })
 
-    // --- TODAY ---
+    // TODAY
     const todayEntries = entriesMap.get(today) || []
     const todayCompleted = todayEntries.filter(e => e.status === 'completed').length
     setTodayData({ completed: todayCompleted, total: totalHabits })
 
-    // --- WEEKLY (Last 7 days) ---
+    // WEEKLY (Last 7 days)
     const weekData = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
@@ -84,7 +92,7 @@ export default function Analytics() {
     }
     setWeeklyData(weekData)
 
-    // --- MONTHLY (Last 30 days with dots) ---
+    // MONTHLY
     const monthData = []
     for (let i = 29; i >= 0; i--) {
       const date = new Date()
@@ -108,8 +116,7 @@ export default function Analytics() {
     }
     setMonthlyData(monthData)
 
-    // --- STATS ---
-    // Current streak (consecutive days with 100% completion)
+    // STATS
     let currentStreak = 0
     let checkDate = new Date()
     for (let i = 0; i < 60; i++) {
@@ -125,7 +132,6 @@ export default function Analytics() {
       checkDate.setDate(checkDate.getDate() - 1)
     }
 
-    // Best streak
     let bestStreak = 0
     let tempStreak = 0
     const sortedDates = Array.from(entriesMap.keys()).sort()
@@ -141,13 +147,11 @@ export default function Analytics() {
       }
     }
 
-    // Total completions
     let totalCompletions = 0
     entries?.forEach(e => {
       if (e.status === 'completed') totalCompletions++
     })
 
-    // Consistency (days with at least 1 completion / days with entries)
     const daysWithEntries = entriesMap.size
     const daysWithCompletions = Array.from(entriesMap.values())
       .filter(dayEntries => dayEntries.some(e => e.status === 'completed'))
@@ -162,6 +166,10 @@ export default function Analytics() {
       totalCompletions,
       consistency,
     })
+
+    // Set motivation based on consistency
+    const quote = motivationalQuotes.find(q => consistency >= q.min && consistency <= q.max)
+    setMotivation(quote ? quote.text : "🌟 Keep going, you're doing great!")
 
     setLoading(false)
   }
@@ -190,7 +198,12 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* --- TODAY --- */}
+        {/* MOTIVATIONAL QUOTE */}
+        <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 mb-4 text-center">
+          <p className="text-sm text-blue-700 font-medium">{motivation}</p>
+        </div>
+
+        {/* TODAY */}
         <div className="bg-white rounded-2xl p-6 shadow-lg mb-4">
           <h2 className="text-sm font-semibold text-gray-600 mb-2">📅 Today</h2>
           <div className="flex items-center justify-between">
@@ -225,49 +238,54 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* --- WEEKLY BAR CHART --- */}
+        {/* WEEKLY BAR CHART */}
         <div className="bg-white rounded-2xl p-4 shadow mb-4">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">📈 Weekly Progress</h2>
-          <div className="flex items-end justify-between h-40 gap-1">
-            {weeklyData.map((day, i) => {
-              const height = day.total > 0 ? (day.completed / day.total) * 100 : 0
-              const barColor = day.completed === day.total ? 'bg-green-500' 
-                : day.completed > 0 ? 'bg-yellow-500' : 'bg-gray-300'
-              
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center">
-                  <div className="w-full relative" style={{ height: '100%' }}>
-                    <div 
-                      className={`absolute bottom-0 w-full rounded-t-lg transition-all ${barColor}`}
-                      style={{ height: `${Math.max(height, 2)}%` }}
-                    ></div>
-                    <div className="absolute bottom-0 w-full text-center text-[10px] font-medium text-gray-600 -mb-5">
-                      {day.completed}/{day.total}
+          {weeklyData.every(d => d.completed === 0) ? (
+            <div className="text-center py-8 text-gray-400">
+              <p className="text-4xl mb-2">📭</p>
+              <p className="text-sm">No habits tracked this week yet</p>
+              <p className="text-xs">Start tracking to see your progress!</p>
+            </div>
+          ) : (
+            <div className="flex items-end justify-between h-40 gap-1">
+              {weeklyData.map((day, i) => {
+                const height = day.total > 0 ? (day.completed / day.total) * 100 : 0
+                const barColor = day.completed === day.total ? 'bg-green-500' 
+                  : day.completed > 0 ? 'bg-yellow-500' : 'bg-gray-300'
+                
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center">
+                    <div className="w-full relative" style={{ height: '100%' }}>
+                      <div 
+                        className={`absolute bottom-0 w-full rounded-t-lg transition-all ${barColor}`}
+                        style={{ height: `${Math.max(height, 2)}%` }}
+                      ></div>
+                      <div className="absolute bottom-0 w-full text-center text-[10px] font-medium text-gray-600 -mb-5">
+                        {day.completed}/{day.total}
+                      </div>
                     </div>
+                    <span className="text-xs text-gray-500 mt-6">{day.day}</span>
                   </div>
-                  <span className="text-xs text-gray-500 mt-6">{day.day}</span>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
-        {/* --- MONTHLY HEATMAP --- */}
+        {/* MONTHLY HEATMAP */}
         <div className="bg-white rounded-2xl p-4 shadow mb-4">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">📅 Monthly Progress</h2>
           <div className="grid grid-cols-7 gap-1">
             {monthlyData.map((day, i) => {
               const dotColor = day.status === 'all-done' ? 'bg-green-500' 
                 : day.status === 'partial' ? 'bg-yellow-500' : 'bg-gray-200'
-              const label = day.status === 'all-done' ? '✅' 
-                : day.status === 'partial' ? '🟡' : '⬜'
               
               return (
                 <div key={i} className="flex flex-col items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${dotColor}`}>
                     <span className="text-[10px] text-white font-medium">{day.day}</span>
                   </div>
-                  <div className="text-[8px] text-gray-400">{day.month}</div>
                 </div>
               )
             })}
@@ -279,7 +297,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* --- STATS CARDS --- */}
+        {/* STATS CARDS */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-white p-4 rounded-xl shadow text-center">
             <div className="text-2xl font-bold text-orange-500">{stats.bestStreak}d</div>
