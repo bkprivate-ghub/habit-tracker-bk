@@ -16,7 +16,7 @@ export default function Analytics() {
     consistency: 0,
   })
   const [motivation, setMotivation] = useState('')
-  const [weekOffset, setWeekOffset] = useState(0) // 0 = current week, -1 = previous, etc.
+  const [weekOffset, setWeekOffset] = useState(0)
   const [weekLabel, setWeekLabel] = useState('')
 
   const motivationalQuotes = [
@@ -47,7 +47,6 @@ export default function Analytics() {
     const totalHabits = habits.length
     const today = new Date().toISOString().split('T')[0]
 
-    // Get last 90 days
     const ninetyDaysAgo = new Date()
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
     const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0]
@@ -73,14 +72,13 @@ export default function Analytics() {
 
     // WEEKLY with offset
     const todayDate = new Date()
-    const currentDay = todayDate.getDay() // 0 = Sunday
+    const currentDay = todayDate.getDay()
     const startOfWeek = new Date(todayDate)
     startOfWeek.setDate(todayDate.getDate() - currentDay + (weekOffset * 7))
     
     const endOfWeek = new Date(startOfWeek)
     endOfWeek.setDate(startOfWeek.getDate() + 6)
     
-    // Set week label
     const startMonth = startOfWeek.toLocaleDateString('en-US', { month: 'short' })
     const endMonth = endOfWeek.toLocaleDateString('en-US', { month: 'short' })
     const startDay = startOfWeek.getDate()
@@ -103,35 +101,16 @@ export default function Analytics() {
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
       
       const hasEntries = entriesMap.has(dateStr)
-      
-      let status = 'missed'
-      let displayText = '0/5'
-      
-      if (hasEntries) {
-        if (completed === totalHabits) {
-          status = 'all-done'
-          displayText = `${completed}/${totalHabits} ✅`
-        } else if (completed > 0) {
-          status = 'partial'
-          displayText = `${completed}/${totalHabits} 🟡`
-        } else {
-          status = 'missed'
-          displayText = `${completed}/${totalHabits} ❌`
-        }
-      } else {
-        status = 'no-data'
-        displayText = '—'
-      }
+      const isFuture = date > new Date()
       
       weekData.push({
         day: dayName,
         date: dateStr,
         completed,
         total: totalHabits,
-        status,
-        displayText,
         hasEntries,
-        isFuture: date > new Date(),
+        isFuture,
+        percentage: totalHabits > 0 ? Math.round((completed / totalHabits) * 100) : 0,
       })
     }
     setWeeklyData(weekData)
@@ -286,81 +265,125 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* WEEKLY with Navigation */}
+        {/* WEEKLY - BEAUTIFUL BAR CHART */}
         <div className="bg-white rounded-2xl p-4 shadow mb-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-600">📈 Weekly Progress</h2>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button 
                 onClick={goToPreviousWeek}
-                className="text-lg p-1 hover:bg-gray-100 rounded-full transition"
+                className="text-sm p-1 hover:bg-gray-100 rounded-full transition px-2"
               >
                 ◀
               </button>
               <span className="text-xs font-medium text-gray-600">{weekLabel}</span>
               <button 
                 onClick={goToNextWeek}
-                className={`text-lg p-1 rounded-full transition ${weekOffset >= 0 ? 'opacity-30' : 'hover:bg-gray-100'}`}
+                className={`text-sm p-1 rounded-full transition px-2 ${weekOffset >= 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100'}`}
                 disabled={weekOffset >= 0}
               >
                 ▶
               </button>
             </div>
           </div>
-          
-          <div className="flex items-end justify-between h-44 gap-1">
+
+          {/* Bar Chart */}
+          <div className="flex items-end justify-between h-48 gap-1.5 mt-2">
             {weeklyData.map((day, i) => {
-              const height = day.total > 0 ? (day.completed / day.total) * 100 : 0
+              const height = day.percentage
+              const isToday = day.date === new Date().toISOString().split('T')[0]
               
               let barColor = 'bg-gray-200'
               let labelColor = 'text-gray-400'
+              let barLabel = '—'
               
               if (day.isFuture) {
                 barColor = 'bg-gray-100'
-                labelColor = 'text-gray-300'
+                barLabel = '📅'
               } else if (day.hasEntries) {
-                if (day.completed === day.total) {
-                  barColor = 'bg-green-500'
+                if (day.percentage === 100) {
+                  barColor = 'bg-gradient-to-t from-green-500 to-green-400'
                   labelColor = 'text-green-600'
-                } else if (day.completed > 0) {
-                  barColor = 'bg-yellow-500'
+                  barLabel = `${day.completed}/${day.total} ✅`
+                } else if (day.percentage >= 50) {
+                  barColor = 'bg-gradient-to-t from-yellow-500 to-yellow-400'
                   labelColor = 'text-yellow-600'
+                  barLabel = `${day.completed}/${day.total} 🟡`
+                } else if (day.percentage > 0) {
+                  barColor = 'bg-gradient-to-t from-orange-400 to-orange-300'
+                  labelColor = 'text-orange-500'
+                  barLabel = `${day.completed}/${day.total} 🟠`
                 } else {
-                  barColor = 'bg-red-300'
+                  barColor = 'bg-gradient-to-t from-red-400 to-red-300'
                   labelColor = 'text-red-400'
+                  barLabel = `${day.completed}/${day.total} ❌`
                 }
               }
               
+              // Show empty state for no data
+              if (!day.hasEntries && !day.isFuture) {
+                barColor = 'bg-gray-100'
+                barLabel = '—'
+              }
+
               return (
                 <div key={i} className="flex-1 flex flex-col items-center">
                   <div className="w-full relative" style={{ height: '100%' }}>
-                    {day.isFuture ? (
-                      <div className="absolute bottom-0 w-full h-2 bg-gray-100 rounded-full"></div>
-                    ) : day.hasEntries ? (
+                    {/* Bar */}
+                    {!day.isFuture && day.hasEntries ? (
                       <div 
-                        className={`absolute bottom-0 w-full rounded-t-lg transition-all ${barColor}`}
+                        className={`absolute bottom-0 w-full rounded-t-lg transition-all duration-500 ${barColor}`}
                         style={{ height: `${Math.max(height, 4)}%` }}
-                      ></div>
+                      >
+                        {/* Percentage label on top of bar */}
+                        {height > 20 && (
+                          <div className="absolute -top-5 w-full text-center text-[10px] font-bold text-gray-600">
+                            {height}%
+                          </div>
+                        )}
+                      </div>
+                    ) : day.isFuture ? (
+                      <div className="absolute bottom-0 w-full h-4 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <span className="text-[10px] text-gray-400">📅</span>
+                      </div>
                     ) : (
-                      <div className="absolute bottom-0 w-full h-1 bg-gray-200 rounded-full opacity-30"></div>
+                      <div className="absolute bottom-0 w-full h-2 bg-gray-100 rounded-full"></div>
                     )}
-                    <div className={`absolute bottom-0 w-full text-center text-[10px] font-medium -mb-5 ${labelColor}`}>
-                      {day.isFuture ? '📅' : day.displayText}
+                    
+                    {/* Value label below bar */}
+                    <div className="absolute bottom-0 w-full text-center text-[9px] font-medium -mb-4">
+                      {barLabel}
                     </div>
                   </div>
-                  <span className={`text-xs mt-6 ${day.isFuture ? 'text-gray-300' : day.hasEntries ? 'text-gray-700' : 'text-gray-300'}`}>
+                  <span className={`text-xs mt-5 font-medium ${isToday ? 'text-blue-600 font-bold' : day.isFuture ? 'text-gray-300' : 'text-gray-600'}`}>
                     {day.day}
+                    {isToday && ' • Today'}
                   </span>
                 </div>
               )
             })}
           </div>
-          <div className="flex justify-center gap-4 mt-6 text-xs text-gray-400">
-            <span>🟢 All Done</span>
-            <span>🟡 Partial</span>
-            <span>🔴 Missed</span>
-            <span>— No Data</span>
-            <span>📅 Future</span>
+
+          {/* Legend */}
+          <div className="flex justify-center gap-3 mt-6 text-[10px] text-gray-400 flex-wrap">
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-green-500 rounded-full"></span> 100%
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-yellow-500 rounded-full"></span> 50-99%
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-orange-400 rounded-full"></span> 1-49%
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-red-400 rounded-full"></span> 0%
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-gray-200 rounded-full"></span> No Data
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-3 h-3 bg-gray-100 rounded-full"></span> 📅 Future
+            </span>
           </div>
         </div>
 
@@ -405,7 +428,7 @@ export default function Analytics() {
             <div className="text-xs text-gray-500">📊 Consistency</div>
           </div>
           <div className="bg-white p-4 rounded-xl shadow text-center">
-            <div className="text-2xl font-bold text-blue-500">{weeklyData.filter(d => d.status === 'all-done').length}/7</div>
+            <div className="text-2xl font-bold text-blue-500">{weeklyData.filter(d => d.percentage === 100 && d.hasEntries).length}/7</div>
             <div className="text-xs text-gray-500">📅 Perfect Days</div>
           </div>
         </div>
