@@ -7,11 +7,13 @@ import { supabase } from './lib/supabase'
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([])
   const [dailyEntries, setDailyEntries] = useState<any[]>([])
+  const [streaks, setStreaks] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newHabitName, setNewHabitName] = useState('')
   const [selectedEmoji, setSelectedEmoji] = useState('📚')
   const [greeting, setGreeting] = useState('')
+  const [togglingId, setTogglingId] = useState<string | null>(null)
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
   const today = new Date().toISOString().split('T')[0]
@@ -37,64 +39,135 @@ export default function Home() {
     if (habitsData) {
       setHabits(habitsData)
       
-      // Load daily entries
+      // Load daily entries (last 30 days for streaks)
+      const thirtyDaysAgo = new Date()
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+      const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
+      
       const { data: entriesData } = await supabase
         .from('daily_entries')
         .select('*')
-        .eq('date', today)
+        .gte('date', thirtyDaysAgoStr)
+        .order('date', { ascending: false })
       
       setDailyEntries(entriesData || [])
+      
+      // Calculate streaks
+      calculateStreaks(entriesData || [], habitsData)
     }
     
     setLoading(false)
   }
 
-  const toggleHabit = async (habitId: string) => {
-    console.log('🔄 Toggling:', habitId)
+  const calculateStreaks = (entries: any[], habitsData: any[]) => {
+    const streakMap: Record<string, number> = {}
     
-    // Check if already done
-    const existing = dailyEntries.find(e => e.habit_id === habitId)
-    const isDone = existing?.status === 'completed'
-    
-    // Delete existing entry
-    await supabase
-      .from('daily_entries')
-      .delete()
-      .eq('habit_id', habitId)
-      .eq('date', today)
-    
-    // Insert new entry
-    const newStatus = isDone ? 'pending' : 'completed'
-    const { error } = await supabase
-      .from('daily_entries')
-      .insert({
-        habit_id: habitId,
-        date: today,
-        status: newStatus,
-        completed_at: isDone ? null : new Date().toISOString()
-      })
-    
-    if (error) {
-      console.error('❌ Error:', error)
-      alert('Error: ' + error.message)
-      return
+    for (const habit of habitsData) {
+      const habitEntries = entries
+        .filter(e => e.habit_id === habit.id && e.status === 'completed')
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      
+      let streak = 0
+      let checkDate = new Date()
+      
+      for (let i = 0; i < 30; i++) {
+        const dateStr = checkDate.toISOString().split('T')[0]
+        const entry = habitEntries.find(e => e.date === dateStr)
+        
+        if (entry) {
+          streak++
+        } else {
+          break
+        }
+        checkDate.setDate(checkDate.getDate() - 1)
+      }
+      
+      streakMap[habit.id] = streak
     }
     
-    console.log('✅ Toggled successfully')
+    setStreaks(streakMap)
+  }
+
+  const toggleHabit = async (habitId: string) => {
+    setTogglingId(habitId) // Show loading state
     
-    // Reload data
-    await loadAllData()
+    // Check if already done today
+    const existing = dailyEntries.find(e => e.habit_id === habitId && e.date === today)
+    const isDone = existing?.status === 'completed'
+    const newStatus = isDone ? 'pending' : 'completed'
+    
+    // Update UI immediately (optimistic update)
+    const updatedEntries = [...dailyEntries]
+    const existingIndex = updatedEntries.findIndex(e => e.habit_id === habitId && e.date === today)
+    
+    if (existingIndex >= 0) {
+      updatedEntries[existingIndex] = { ...updatedEntries[existingIndex], status: newStatus }
+    } else {
+      updatedEntries.push({ habit_id: habitId, date: today, status: newStatus })
+    }
+    
+    setDailyEntries(updatedEntries)
+    
+    // Update streaks immediately
+    const newStreaks = { ...streaks }
+    if (newStatus === 'completed') {
+      // Check if yesterday was completed
+      const yesterday = new Date()
+      yesterday.setDate(yesterday.getDate() - 1)
+      const yesterdayStr = yesterday.toISOString().split('T')[0]
+      const yesterdayEntry = dailyEntries.find(e => e.habit_id === habitId && e.date === yesterdayStr)
+      
+      if (yesterdayEntry?.status === 'completed') {
+        newStreaks[habitId] = (streaks[habitId] || 0) + 1
+      } else {
+        newStreaks[habitId] = 1
+      }
+    } else {
+      newStreaks[habitId] = 0
+    }
+    setStreaks(newStreaks)
+    
+    // Update in background
+    try {
+      await supabase
+        .from('daily_entries')
+        .delete()
+        .eq('habit_id', habitId)
+        .eq('date', today)
+      
+      await supabase
+        .from('daily_entries')
+        .insert({
+          habit_id: habitId,
+          date: today,
+          status: newStatus,
+          completed_at: !isDone ? new Date().toISOString() : null
+        })
+      
+      // Also update habits table
+      await supabase
+        .from('habits')
+        .update({ done: !isDone })
+        .eq('id', habitId)
+      
+    } catch (error) {
+      console.error('Background sync error:', error)
+    }
+    
+    setTogglingId(null)
   }
 
   const addHabit = async () => {
     if (newHabitName.trim() === '') return
     const fullName = `${selectedEmoji} ${newHabitName}`
     
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('habits')
       .insert([{ name: fullName, done: false }])
+      .select()
     
-    if (!error) {
+    if (!error && data) {
+      setHabits([...habits, data[0]])
       setNewHabitName('')
       setShowAddForm(false)
       await loadAllData()
@@ -102,13 +175,16 @@ export default function Home() {
   }
 
   const getIsDone = (habitId: string) => {
-    const entry = dailyEntries.find(e => e.habit_id === habitId)
+    const entry = dailyEntries.find(e => e.habit_id === habitId && e.date === today)
     return entry?.status === 'completed'
   }
 
   const total = habits.length
   const completed = habits.filter(h => getIsDone(h.id)).length
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
+  
+  // Calculate total streak across all habits
+  const totalStreak = Object.values(streaks).reduce((sum, s) => sum + s, 0)
 
   const dateDisplay = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -120,8 +196,8 @@ export default function Home() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4">⏳</div>
-          <p className="text-gray-500">Loading...</p>
+          <div className="text-4xl mb-4 animate-pulse">⏳</div>
+          <p className="text-gray-500">Loading your habits...</p>
         </div>
       </div>
     )
@@ -180,8 +256,8 @@ export default function Home() {
             <div className="text-xs text-gray-500">Remaining</div>
           </div>
           <div className="bg-white p-3 rounded-xl shadow text-center">
-            <div className="text-2xl font-bold text-orange-500">0</div>
-            <div className="text-xs text-gray-500">Streak</div>
+            <div className="text-2xl font-bold text-orange-500">{totalStreak}</div>
+            <div className="text-xs text-gray-500">Total Streak</div>
           </div>
         </div>
 
@@ -189,18 +265,35 @@ export default function Home() {
         
         {habits.map((habit) => {
           const isDone = getIsDone(habit.id)
+          const streak = streaks[habit.id] || 0
+          const isToggling = togglingId === habit.id
+          
           return (
             <div 
               key={habit.id}
-              onClick={() => toggleHabit(habit.id)}
+              onClick={() => !isToggling && toggleHabit(habit.id)}
               className={`bg-white p-4 rounded-xl shadow mb-2 border-l-4 transition-all cursor-pointer
-                ${isDone ? 'border-green-500 bg-green-50/50' : 'border-blue-500'}`}
+                ${isDone ? 'border-green-500 bg-green-50/50' : 'border-blue-500'}
+                ${isToggling ? 'opacity-50' : 'opacity-100'}`}
             >
               <div className="flex items-center justify-between">
-                <span className={`${isDone ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                  {habit.name}
-                </span>
-                <span className="text-xl">{isDone ? '✅' : '◻️'}</span>
+                <div>
+                  <span className={`${isDone ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                    {habit.name}
+                  </span>
+                  {streak > 0 && (
+                    <span className="ml-2 text-xs text-orange-500 font-medium">
+                      🔥 {streak}d
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  {isToggling ? (
+                    <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                  ) : (
+                    <span className="text-xl">{isDone ? '✅' : '◻️'}</span>
+                  )}
+                </div>
               </div>
             </div>
           )
