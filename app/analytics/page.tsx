@@ -6,13 +6,13 @@ import { supabase } from '../lib/supabase'
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true)
+  const [todayData, setTodayData] = useState({ completed: 0, total: 0 })
+  const [weeklyData, setWeeklyData] = useState<any[]>([])
+  const [monthlyData, setMonthlyData] = useState<any[]>([])
   const [stats, setStats] = useState({
-    totalHabits: 0,
-    completionRate: 0,
+    currentStreak: 0,
     bestStreak: 0,
     totalCompletions: 0,
-    weeklyData: [] as { day: string; completed: number; total: number }[],
-    monthlyData: [] as { date: string; completed: number; total: number }[],
     consistency: 0,
   })
 
@@ -22,108 +22,147 @@ export default function Analytics() {
 
   const loadAnalytics = async () => {
     setLoading(true)
-    
+
     // Get all habits
     const { data: habits } = await supabase
       .from('habits')
       .select('*')
-    
-    if (!habits) {
+
+    if (!habits || habits.length === 0) {
       setLoading(false)
       return
     }
-    
-    // Get last 30 days of entries
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
-    
+
+    const totalHabits = habits.length
+    const today = new Date().toISOString().split('T')[0]
+
+    // Get last 60 days of entries
+    const sixtyDaysAgo = new Date()
+    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
+    const sixtyDaysAgoStr = sixtyDaysAgo.toISOString().split('T')[0]
+
     const { data: entries } = await supabase
       .from('daily_entries')
       .select('*')
-      .gte('date', thirtyDaysAgoStr)
+      .gte('date', sixtyDaysAgoStr)
       .order('date', { ascending: true })
-    
-    // Calculate weekly data (last 7 days)
-    const weeklyData = []
-    const today = new Date()
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split('T')[0]
-      const dayEntries = entries?.filter(e => e.date === dateStr) || []
-      const completed = dayEntries.filter(e => e.status === 'completed').length
-      weeklyData.push({
-        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-        completed,
-        total: habits.length,
-      })
-    }
-    
-    // Calculate monthly data (last 30 days)
-    const monthlyData = []
-    for (let i = 29; i >= 0; i--) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split('T')[0]
-      const dayEntries = entries?.filter(e => e.date === dateStr) || []
-      const completed = dayEntries.filter(e => e.status === 'completed').length
-      monthlyData.push({
-        date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        completed,
-        total: habits.length,
-      })
-    }
-    
-    // Calculate stats
-    const totalCompletions = entries?.filter(e => e.status === 'completed').length || 0
-    const totalPossible = habits.length * 30
-    const completionRate = totalPossible > 0 ? Math.round((totalCompletions / totalPossible) * 100) : 0
-    
-    // Calculate consistency (days with > 0 completions)
-    const daysWithCompletions = new Set()
+
+    const entriesMap = new Map()
     entries?.forEach(e => {
-      if (e.status === 'completed') {
-        daysWithCompletions.add(e.date)
+      if (!entriesMap.has(e.date)) {
+        entriesMap.set(e.date, [])
       }
+      entriesMap.get(e.date).push(e)
     })
-    const consistency = Math.round((daysWithCompletions.size / 30) * 100)
-    
-    // Calculate best streak
-    let bestStreak = 0
-    let currentStreak = 0
-    let prevDate: Date | null = null
-    
-    const sortedEntries = entries?.filter(e => e.status === 'completed')
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()) || []
-    
-    for (const entry of sortedEntries) {
-      const currentDate = new Date(entry.date)
-      if (prevDate === null) {
-        currentStreak = 1
-      } else {
-        const diffDays = Math.floor((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24))
-        if (diffDays === 1) {
-          currentStreak++
-        } else {
-          bestStreak = Math.max(bestStreak, currentStreak)
-          currentStreak = 1
-        }
-      }
-      prevDate = currentDate
+
+    // --- TODAY ---
+    const todayEntries = entriesMap.get(today) || []
+    const todayCompleted = todayEntries.filter(e => e.status === 'completed').length
+    setTodayData({ completed: todayCompleted, total: totalHabits })
+
+    // --- WEEKLY (Last 7 days) ---
+    const weekData = []
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
+      const dayEntries = entriesMap.get(dateStr) || []
+      const completed = dayEntries.filter(e => e.status === 'completed').length
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
+      
+      let status = 'missed'
+      if (completed === totalHabits) status = 'all-done'
+      else if (completed > 0) status = 'partial'
+      
+      weekData.push({
+        day: dayName,
+        date: dateStr,
+        completed,
+        total: totalHabits,
+        status,
+      })
     }
-    bestStreak = Math.max(bestStreak, currentStreak)
-    
+    setWeeklyData(weekData)
+
+    // --- MONTHLY (Last 30 days with dots) ---
+    const monthData = []
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date()
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
+      const dayEntries = entriesMap.get(dateStr) || []
+      const completed = dayEntries.filter(e => e.status === 'completed').length
+      
+      let status = 'missed'
+      if (completed === totalHabits) status = 'all-done'
+      else if (completed > 0) status = 'partial'
+      
+      monthData.push({
+        date: dateStr,
+        day: date.getDate(),
+        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        completed,
+        total: totalHabits,
+        status,
+      })
+    }
+    setMonthlyData(monthData)
+
+    // --- STATS ---
+    // Current streak (consecutive days with 100% completion)
+    let currentStreak = 0
+    let checkDate = new Date()
+    for (let i = 0; i < 60; i++) {
+      const dateStr = checkDate.toISOString().split('T')[0]
+      const dayEntries = entriesMap.get(dateStr) || []
+      const completed = dayEntries.filter(e => e.status === 'completed').length
+      
+      if (completed === totalHabits) {
+        currentStreak++
+      } else {
+        break
+      }
+      checkDate.setDate(checkDate.getDate() - 1)
+    }
+
+    // Best streak
+    let bestStreak = 0
+    let tempStreak = 0
+    const sortedDates = Array.from(entriesMap.keys()).sort()
+    for (const date of sortedDates) {
+      const dayEntries = entriesMap.get(date) || []
+      const completed = dayEntries.filter(e => e.status === 'completed').length
+      
+      if (completed === totalHabits) {
+        tempStreak++
+        bestStreak = Math.max(bestStreak, tempStreak)
+      } else {
+        tempStreak = 0
+      }
+    }
+
+    // Total completions
+    let totalCompletions = 0
+    entries?.forEach(e => {
+      if (e.status === 'completed') totalCompletions++
+    })
+
+    // Consistency (days with at least 1 completion / days with entries)
+    const daysWithEntries = entriesMap.size
+    const daysWithCompletions = Array.from(entriesMap.values())
+      .filter(dayEntries => dayEntries.some(e => e.status === 'completed'))
+      .length
+    const consistency = daysWithEntries > 0 
+      ? Math.round((daysWithCompletions / daysWithEntries) * 100)
+      : 0
+
     setStats({
-      totalHabits: habits.length,
-      completionRate,
+      currentStreak,
       bestStreak,
       totalCompletions,
-      weeklyData,
-      monthlyData,
       consistency,
     })
-    
+
     setLoading(false)
   }
 
@@ -151,108 +190,112 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-white p-4 rounded-xl shadow text-center">
-            <div className="text-2xl font-bold text-blue-500">{stats.completionRate}%</div>
-            <div className="text-xs text-gray-500">Completion Rate</div>
+        {/* --- TODAY --- */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg mb-4">
+          <h2 className="text-sm font-semibold text-gray-600 mb-2">📅 Today</h2>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-3xl font-bold text-blue-500">
+                {todayData.completed}/{todayData.total}
+              </p>
+              <p className="text-sm text-gray-500">habits completed today</p>
+            </div>
+            <div className="relative w-16 h-16">
+              <svg className="transform -rotate-90 w-16 h-16">
+                <circle cx="32" cy="32" r="28" fill="none" stroke="#E5E7EB" strokeWidth="5"/>
+                <circle 
+                  cx="32" cy="32" r="28" 
+                  fill="none" 
+                  stroke="#3B82F6" 
+                  strokeWidth="5"
+                  strokeDasharray={`${(todayData.completed / todayData.total) * 176} 176`}
+                  strokeLinecap="round"
+                  className="transition-all duration-500"
+                />
+              </svg>
+              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold">
+                {todayData.total > 0 ? Math.round((todayData.completed / todayData.total) * 100) : 0}%
+              </span>
+            </div>
           </div>
-          <div className="bg-white p-4 rounded-xl shadow text-center">
-            <div className="text-2xl font-bold text-orange-500">{stats.bestStreak}d</div>
-            <div className="text-xs text-gray-500">Best Streak</div>
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow text-center">
-            <div className="text-2xl font-bold text-green-500">{stats.consistency}%</div>
-            <div className="text-xs text-gray-500">Consistency</div>
-          </div>
-          <div className="bg-white p-4 rounded-xl shadow text-center">
-            <div className="text-2xl font-bold text-purple-500">{stats.totalCompletions}</div>
-            <div className="text-xs text-gray-500">Total Completions</div>
-          </div>
+          {stats.currentStreak > 0 && (
+            <div className="mt-3 text-sm text-orange-500 font-medium">
+              🔥 {stats.currentStreak} day streak!
+            </div>
+          )}
         </div>
 
-        {/* Weekly Progress */}
+        {/* --- WEEKLY BAR CHART --- */}
         <div className="bg-white rounded-2xl p-4 shadow mb-4">
           <h2 className="text-sm font-semibold text-gray-600 mb-3">📈 Weekly Progress</h2>
-          <div className="flex items-end justify-between h-32 gap-1">
-            {stats.weeklyData.map((day, i) => {
+          <div className="flex items-end justify-between h-40 gap-1">
+            {weeklyData.map((day, i) => {
               const height = day.total > 0 ? (day.completed / day.total) * 100 : 0
+              const barColor = day.completed === day.total ? 'bg-green-500' 
+                : day.completed > 0 ? 'bg-yellow-500' : 'bg-gray-300'
+              
               return (
                 <div key={i} className="flex-1 flex flex-col items-center">
-                  <div className="w-full bg-gray-200 rounded-t-lg" style={{ height: `${height}%` }}>
+                  <div className="w-full relative" style={{ height: '100%' }}>
                     <div 
-                      className="w-full bg-blue-500 rounded-t-lg transition-all"
-                      style={{ height: `${height}%` }}
+                      className={`absolute bottom-0 w-full rounded-t-lg transition-all ${barColor}`}
+                      style={{ height: `${Math.max(height, 2)}%` }}
                     ></div>
+                    <div className="absolute bottom-0 w-full text-center text-[10px] font-medium text-gray-600 -mb-5">
+                      {day.completed}/{day.total}
+                    </div>
                   </div>
-                  <span className="text-xs text-gray-500 mt-1">{day.day}</span>
+                  <span className="text-xs text-gray-500 mt-6">{day.day}</span>
                 </div>
               )
             })}
           </div>
         </div>
 
-        {/* Monthly Trend */}
+        {/* --- MONTHLY HEATMAP --- */}
         <div className="bg-white rounded-2xl p-4 shadow mb-4">
-          <h2 className="text-sm font-semibold text-gray-600 mb-3">📉 Monthly Trend</h2>
-          <div className="space-y-1">
-            {stats.monthlyData.slice(0, 7).map((day, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-12">{day.date}</span>
-                <div className="flex-1 h-4 bg-gray-200 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full bg-green-500 rounded-full transition-all"
-                    style={{ width: `${(day.completed / day.total) * 100}%` }}
-                  ></div>
+          <h2 className="text-sm font-semibold text-gray-600 mb-3">📅 Monthly Progress</h2>
+          <div className="grid grid-cols-7 gap-1">
+            {monthlyData.map((day, i) => {
+              const dotColor = day.status === 'all-done' ? 'bg-green-500' 
+                : day.status === 'partial' ? 'bg-yellow-500' : 'bg-gray-200'
+              const label = day.status === 'all-done' ? '✅' 
+                : day.status === 'partial' ? '🟡' : '⬜'
+              
+              return (
+                <div key={i} className="flex flex-col items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${dotColor}`}>
+                    <span className="text-[10px] text-white font-medium">{day.day}</span>
+                  </div>
+                  <div className="text-[8px] text-gray-400">{day.month}</div>
                 </div>
-                <span className="text-xs text-gray-500 w-8">
-                  {day.completed}/{day.total}
-                </span>
-              </div>
-            ))}
+              )
+            })}
+          </div>
+          <div className="flex justify-center gap-4 mt-3 text-xs text-gray-500">
+            <span>🟢 All Done</span>
+            <span>🟡 Partial</span>
+            <span>⬜ Missed</span>
           </div>
         </div>
 
-        {/* Achievements */}
-        <div className="bg-white rounded-2xl p-4 shadow">
-          <h2 className="text-sm font-semibold text-gray-600 mb-3">🏆 Achievements</h2>
-          <div className="grid grid-cols-3 gap-2">
-            {stats.bestStreak >= 7 && (
-              <div className="bg-orange-50 p-3 rounded-xl text-center border border-orange-200">
-                <div className="text-2xl">🔥</div>
-                <div className="text-xs text-orange-600 font-medium">7 Day Streak</div>
-              </div>
-            )}
-            {stats.bestStreak >= 30 && (
-              <div className="bg-yellow-50 p-3 rounded-xl text-center border border-yellow-200">
-                <div className="text-2xl">⭐</div>
-                <div className="text-xs text-yellow-600 font-medium">30 Day Streak</div>
-              </div>
-            )}
-            {stats.completionRate >= 90 && (
-              <div className="bg-green-50 p-3 rounded-xl text-center border border-green-200">
-                <div className="text-2xl">💪</div>
-                <div className="text-xs text-green-600 font-medium">90%+ Rate</div>
-              </div>
-            )}
-            {stats.totalHabits >= 5 && (
-              <div className="bg-blue-50 p-3 rounded-xl text-center border border-blue-200">
-                <div className="text-2xl">📚</div>
-                <div className="text-xs text-blue-600 font-medium">5+ Habits</div>
-              </div>
-            )}
-            {stats.consistency >= 80 && (
-              <div className="bg-purple-50 p-3 rounded-xl text-center border border-purple-200">
-                <div className="text-2xl">🎯</div>
-                <div className="text-xs text-purple-600 font-medium">80% Consistency</div>
-              </div>
-            )}
-            {stats.bestStreak === 0 && (
-              <div className="bg-gray-50 p-3 rounded-xl text-center border border-gray-200 col-span-3">
-                <div className="text-2xl">🚀</div>
-                <div className="text-xs text-gray-500 font-medium">Complete habits to unlock achievements!</div>
-              </div>
-            )}
+        {/* --- STATS CARDS --- */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white p-4 rounded-xl shadow text-center">
+            <div className="text-2xl font-bold text-orange-500">{stats.bestStreak}d</div>
+            <div className="text-xs text-gray-500">🏆 Best Streak</div>
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow text-center">
+            <div className="text-2xl font-bold text-purple-500">{stats.totalCompletions}</div>
+            <div className="text-xs text-gray-500">✅ Total Done</div>
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow text-center">
+            <div className="text-2xl font-bold text-green-500">{stats.consistency}%</div>
+            <div className="text-xs text-gray-500">📊 Consistency</div>
+          </div>
+          <div className="bg-white p-4 rounded-xl shadow text-center">
+            <div className="text-2xl font-bold text-blue-500">{weeklyData.filter(d => d.status === 'all-done').length}/7</div>
+            <div className="text-xs text-gray-500">📅 Perfect Days</div>
           </div>
         </div>
 
