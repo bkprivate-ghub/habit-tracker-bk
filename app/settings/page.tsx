@@ -91,7 +91,7 @@ export default function Settings() {
         </div>
 
         {/* Stats Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">📊 Your Stats</h2>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 text-center">
@@ -104,27 +104,6 @@ export default function Settings() {
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">Completed Today</div>
             </div>
-          </div>
-        </div>
-
-        {/* Appearance */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">🎨 Appearance</h2>
-          <div className="space-y-2">
-            <button 
-              className="w-full py-3 text-left px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition flex items-center gap-3 text-gray-700 dark:text-gray-300"
-              onClick={() => document.documentElement.classList.remove('dark')}
-            >
-              <span className="text-xl">☀️</span>
-              <span>Light Mode</span>
-            </button>
-            <button 
-              className="w-full py-3 text-left px-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition flex items-center gap-3 text-gray-700 dark:text-gray-300"
-              onClick={() => document.documentElement.classList.add('dark')}
-            >
-              <span className="text-xl">🌙</span>
-              <span>Dark Mode</span>
-            </button>
           </div>
         </div>
 
