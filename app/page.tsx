@@ -53,7 +53,11 @@ export default function Home() {
       .select('*')
       .eq('date', today)
     
-    if (data) setDailyEntries(data)
+    if (data) {
+      setDailyEntries(data)
+    } else {
+      setDailyEntries([])
+    }
   }
 
   const loadStreaks = async (habitsData: any[]) => {
@@ -76,8 +80,11 @@ export default function Home() {
     setStreaks(streakData)
   }
 
-  const toggleHabit = async (id: string, currentDone: boolean) => {
-    const newStatus = !currentDone ? 'completed' : 'pending'
+  const toggleHabit = async (id: string) => {
+    // Get current status
+    const currentEntry = dailyEntries.find(e => e.habit_id === id && e.date === today)
+    const isDone = currentEntry?.status === 'completed'
+    const newStatus = isDone ? 'pending' : 'completed'
     
     // Update daily entry
     const { error } = await supabase
@@ -86,30 +93,40 @@ export default function Home() {
         habit_id: id,
         date: today,
         status: newStatus,
-        completed_at: !currentDone ? new Date().toISOString() : null
+        completed_at: !isDone ? new Date().toISOString() : null
       })
     
     if (!error) {
       // Update local state
-      setDailyEntries(prev => {
-        const existing = prev.find(e => e.habit_id === id && e.date === today)
-        if (existing) {
-          return prev.map(e => 
-            e.habit_id === id && e.date === today 
-              ? { ...e, status: newStatus }
-              : e
-          )
-        } else {
-          return [...prev, { habit_id: id, date: today, status: newStatus }]
-        }
-      })
+      if (isDone) {
+        // Remove the entry or mark as pending
+        setDailyEntries(prev => {
+          const filtered = prev.filter(e => !(e.habit_id === id && e.date === today))
+          return filtered
+        })
+      } else {
+        // Add the entry
+        setDailyEntries(prev => {
+          const existing = prev.find(e => e.habit_id === id && e.date === today)
+          if (existing) {
+            return prev.map(e => 
+              e.habit_id === id && e.date === today 
+                ? { ...e, status: newStatus }
+                : e
+            )
+          } else {
+            return [...prev, { habit_id: id, date: today, status: newStatus }]
+          }
+        })
+      }
       
       // Also update the habits table for quick reference
       await supabase
         .from('habits')
-        .update({ done: !currentDone })
+        .update({ done: !isDone })
         .eq('id', id)
       
+      // Reload streaks
       await loadStreaks(habits)
     }
   }
@@ -139,6 +156,11 @@ export default function Home() {
   const total = habits.length
   const completed = habits.filter(h => getHabitStatus(h.id)).length
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
+
+  // Calculate total streak safely
+  const totalStreak = Object.values(streaks).reduce((sum, s) => {
+    return sum + (s?.current || 0)
+  }, 0)
 
   const dateDisplay = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -211,7 +233,7 @@ export default function Home() {
           </div>
           <div className="bg-white p-3 rounded-xl shadow text-center">
             <div className="text-2xl font-bold text-orange-500">
-              {Object.values(streaks).reduce((sum, s) => sum + s.current, 0)}
+              {totalStreak}
             </div>
             <div className="text-xs text-gray-500">Total Streak</div>
           </div>
@@ -225,7 +247,7 @@ export default function Home() {
           return (
             <div 
               key={habit.id}
-              onClick={() => toggleHabit(habit.id, isDone)}
+              onClick={() => toggleHabit(habit.id)}
               className={`bg-white p-4 rounded-xl shadow mb-2 border-l-4 transition-all cursor-pointer
                 ${isDone ? 'border-green-500 bg-green-50/50' : 'border-blue-500'}`}
             >
