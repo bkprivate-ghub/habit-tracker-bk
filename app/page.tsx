@@ -22,108 +22,88 @@ export default function Home() {
     if (hour < 12) g = 'Good Morning'
     else if (hour < 17) g = 'Good Afternoon'
     setGreeting(g)
-    loadHabits()
+    loadAllData()
   }, [])
 
-  const loadHabits = async () => {
+  const loadAllData = async () => {
     setLoading(true)
-    console.log('🔄 Loading habits...')
     
-    const { data, error } = await supabase
+    // Load habits
+    const { data: habitsData } = await supabase
       .from('habits')
       .select('*')
       .order('created_at', { ascending: true })
     
-    if (error) {
-      console.error('❌ Error loading habits:', error)
-    } else if (data) {
-      console.log('✅ Habits loaded:', data)
-      setHabits(data)
-      await loadDailyEntries()
+    if (habitsData) {
+      setHabits(habitsData)
+      
+      // Load daily entries
+      const { data: entriesData } = await supabase
+        .from('daily_entries')
+        .select('*')
+        .eq('date', today)
+      
+      setDailyEntries(entriesData || [])
     }
+    
     setLoading(false)
   }
 
-  const loadDailyEntries = async () => {
-    console.log('🔄 Loading daily entries for:', today)
-    const { data, error } = await supabase
+  const toggleHabit = async (habitId: string) => {
+    console.log('🔄 Toggling:', habitId)
+    
+    // Check if already done
+    const existing = dailyEntries.find(e => e.habit_id === habitId)
+    const isDone = existing?.status === 'completed'
+    
+    // Delete existing entry
+    await supabase
       .from('daily_entries')
-      .select('*')
+      .delete()
+      .eq('habit_id', habitId)
       .eq('date', today)
     
-    if (error) {
-      console.error('❌ Error loading daily entries:', error)
-    } else {
-      console.log('✅ Daily entries loaded:', data)
-      setDailyEntries(data || [])
-    }
-  }
-
-  const toggleHabit = async (habitId: string) => {
-    console.log('🔄 Toggling habit:', habitId)
-    
-    // Check current status
-    const existingEntry = dailyEntries.find(e => e.habit_id === habitId)
-    const isCurrentlyDone = existingEntry?.status === 'completed'
-    const newStatus = isCurrentlyDone ? 'pending' : 'completed'
-    
-    console.log('📊 Current status:', isCurrentlyDone ? 'completed' : 'pending')
-    console.log('📊 New status:', newStatus)
-    
-    // Update daily_entries
-    const { error: entryError } = await supabase
+    // Insert new entry
+    const newStatus = isDone ? 'pending' : 'completed'
+    const { error } = await supabase
       .from('daily_entries')
-      .upsert({
+      .insert({
         habit_id: habitId,
         date: today,
         status: newStatus,
-        completed_at: !isCurrentlyDone ? new Date().toISOString() : null
+        completed_at: isDone ? null : new Date().toISOString()
       })
     
-    if (entryError) {
-      console.error('❌ Error updating daily entry:', entryError)
+    if (error) {
+      console.error('❌ Error:', error)
+      alert('Error: ' + error.message)
       return
     }
     
-    console.log('✅ Daily entry updated')
-    
-    // Update habits table
-    const { error: habitError } = await supabase
-      .from('habits')
-      .update({ done: !isCurrentlyDone })
-      .eq('id', habitId)
-    
-    if (habitError) {
-      console.error('❌ Error updating habit:', habitError)
-      return
-    }
-    
-    console.log('✅ Habit updated')
+    console.log('✅ Toggled successfully')
     
     // Reload data
-    await loadDailyEntries()
-    await loadHabits()
-  }
-
-  const getIsDone = (habitId: string) => {
-    const entry = dailyEntries.find(e => e.habit_id === habitId)
-    return entry?.status === 'completed'
+    await loadAllData()
   }
 
   const addHabit = async () => {
     if (newHabitName.trim() === '') return
     const fullName = `${selectedEmoji} ${newHabitName}`
     
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('habits')
       .insert([{ name: fullName, done: false }])
-      .select()
     
-    if (!error && data) {
-      setHabits([...habits, data[0]])
+    if (!error) {
       setNewHabitName('')
       setShowAddForm(false)
+      await loadAllData()
     }
+  }
+
+  const getIsDone = (habitId: string) => {
+    const entry = dailyEntries.find(e => e.habit_id === habitId)
+    return entry?.status === 'completed'
   }
 
   const total = habits.length
@@ -141,7 +121,7 @@ export default function Home() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4">⏳</div>
-          <p className="text-gray-500">Loading your habits...</p>
+          <p className="text-gray-500">Loading...</p>
         </div>
       </div>
     )
