@@ -190,8 +190,34 @@ export default function Analytics() {
       consistency,
     })
 
-    const quote = motivationalQuotes.find(q => consistency >= q.min && consistency <= q.max)
-    setMotivation(quote ? quote.text : "🌟 Keep going, you're doing great!")
+    // FIXED: Select quote based on current streak and consistency
+    let quote = null
+    
+    // Check if there's any data
+    if (daysWithEntries === 0) {
+      quote = "🌟 Start tracking your habits to see progress!"
+    } else {
+      // First check if today is completed
+      const todayEntry = entriesMap.get(today)
+      const todayCompletedCount = todayEntry?.filter(e => e.status === 'completed').length || 0
+      
+      if (todayCompletedCount === totalHabits && totalHabits > 0) {
+        // Perfect score today!
+        quote = "🌟 PERFECT SCORE! You're unstoppable! Keep this energy!"
+      } else if (todayCompletedCount > 0) {
+        // Partial today
+        quote = "⭐ You're making progress! Every step counts toward your goals!"
+      } else if (stats.currentStreak > 0) {
+        // Good streak but not today
+        quote = `🔥 ${stats.currentStreak} day streak! Keep the momentum going!`
+      } else {
+        // Use consistency-based quote
+        const found = motivationalQuotes.find(q => consistency >= q.min && consistency <= q.max)
+        quote = found ? found.text : "🌟 Keep going, you're doing great!"
+      }
+    }
+
+    setMotivation(quote)
 
     setLoading(false)
   }
@@ -203,89 +229,83 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-4 animate-bounce">📊</div>
-          <p className="text-gray-500 font-light">Loading analytics...</p>
+          <div className="text-4xl mb-4 animate-pulse text-gray-600 dark:text-gray-300">◆</div>
+          <p className="text-gray-500 dark:text-gray-400 font-light">Loading analytics...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 pb-20">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20">
       <div className="max-w-md mx-auto">
         
         <div className="flex justify-between items-center mb-6">
           <div>
-            <Link href="/" className="text-indigo-500 text-sm mb-1 inline-block hover:text-indigo-600 transition">
+            <Link href="/" className="text-indigo-600 dark:text-indigo-400 text-sm mb-1 inline-block hover:text-indigo-700 dark:hover:text-indigo-300 transition">
               ← Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">📊 Analytics</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">📊 Analytics</h1>
           </div>
         </div>
 
-        {/* MOTIVATIONAL QUOTE */}
-        <div className="bg-gradient-to-r from-indigo-50/80 via-purple-50/80 to-pink-50/80 backdrop-blur-sm border border-white/50 rounded-2xl p-4 mb-4 text-center">
-          <p className="text-sm text-purple-700 font-medium">{motivation}</p>
+        {/* MOTIVATIONAL QUOTE - Fixed */}
+        <div className="bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200/50 dark:border-indigo-800/30 rounded-2xl p-4 mb-4 text-center">
+          <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">{motivation}</p>
         </div>
 
         {/* TODAY */}
-        <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-6 shadow-lg border border-white/50 mb-4">
-          <h2 className="text-sm font-semibold text-gray-600 mb-2">🗓️ Today</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">📅 Today</h2>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-3xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+              <p className="text-3xl font-bold text-gray-800 dark:text-white">
                 {todayData.completed}/{todayData.total}
               </p>
-              <p className="text-sm text-gray-500">habits completed today</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">habits completed today</p>
             </div>
             <div className="relative w-16 h-16">
               <svg className="transform -rotate-90 w-16 h-16">
-                <circle cx="32" cy="32" r="28" fill="none" stroke="#E5E7EB" strokeWidth="5"/>
+                <circle cx="32" cy="32" r="28" fill="none" stroke="#E5E7EB" className="dark:stroke-gray-700" strokeWidth="5"/>
                 <circle 
                   cx="32" cy="32" r="28" 
                   fill="none" 
-                  stroke="url(#todayGradient)" 
+                  stroke="#6366F1" 
                   strokeWidth="5"
                   strokeDasharray={`${todayData.total > 0 ? (todayData.completed / todayData.total) * 176 : 0} 176`}
                   strokeLinecap="round"
                   className="transition-all duration-500"
                 />
-                <defs>
-                  <linearGradient id="todayGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#6366F1" />
-                    <stop offset="100%" stopColor="#A855F7" />
-                  </linearGradient>
-                </defs>
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-indigo-600">
+              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-indigo-600 dark:text-indigo-400">
                 {todayData.total > 0 ? Math.round((todayData.completed / todayData.total) * 100) : 0}%
               </span>
             </div>
           </div>
           {stats.currentStreak > 0 && (
-            <div className="mt-3 text-sm text-orange-500 font-medium animate-pulse">
+            <div className="mt-3 text-sm text-orange-500 dark:text-orange-400 font-medium">
               🔥 {stats.currentStreak} day streak!
             </div>
           )}
         </div>
 
-        {/* WEEKLY - FIXED BAR CHART */}
-        <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-white/50 mb-4">
+        {/* WEEKLY BAR CHART */}
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-600">📈 Weekly Progress</h2>
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">📈 Weekly Progress</h2>
             <div className="flex items-center gap-2">
               <button 
                 onClick={goToPreviousWeek}
-                className="text-sm p-1 hover:bg-white/50 rounded-full transition px-2"
+                className="text-sm p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition px-2 text-gray-600 dark:text-gray-300"
               >
                 ◀
               </button>
-              <span className="text-xs font-medium text-gray-600">{weekLabel}</span>
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300">{weekLabel}</span>
               <button 
                 onClick={goToNextWeek}
-                className={`text-sm p-1 rounded-full transition px-2 ${weekOffset >= 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-white/50'}`}
+                className={`text-sm p-1 rounded-full transition px-2 ${weekOffset >= 0 ? 'opacity-30 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} text-gray-600 dark:text-gray-300`}
                 disabled={weekOffset >= 0}
               >
                 ▶
@@ -293,47 +313,42 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* Bar Chart - FIXED with visible bars */}
           <div className="flex items-end justify-between h-52 gap-1.5 mt-2 px-1">
             {weeklyData.map((day, i) => {
-              // Calculate bar height based on percentage
               const barHeight = day.hasEntries ? Math.max(day.percentage, 4) : 4
               const isToday = day.date === new Date().toISOString().split('T')[0]
               
-              // Determine bar color and label
-              let barColor = 'bg-gray-200'
+              let barColor = 'bg-gray-200 dark:bg-gray-700'
               let barLabel = '—'
-              let labelColor = 'text-gray-400'
+              let labelColor = 'text-gray-400 dark:text-gray-500'
               
               if (day.isFuture) {
-                barColor = 'bg-gray-100'
-                barLabel = '🗓️'
-                labelColor = 'text-gray-300'
+                barColor = 'bg-gray-100 dark:bg-gray-800'
+                barLabel = '📅'
+                labelColor = 'text-gray-300 dark:text-gray-600'
               } else if (day.hasEntries) {
                 if (day.percentage === 100) {
-                  barColor = 'bg-emerald-500'
-                  labelColor = 'text-emerald-600'
+                  barColor = 'bg-emerald-500 dark:bg-emerald-400'
+                  labelColor = 'text-emerald-600 dark:text-emerald-400'
                   barLabel = `✅ ${day.completed}/${day.total}`
                 } else if (day.percentage >= 50) {
-                  barColor = 'bg-amber-500'
-                  labelColor = 'text-amber-600'
+                  barColor = 'bg-amber-500 dark:bg-amber-400'
+                  labelColor = 'text-amber-600 dark:text-amber-400'
                   barLabel = `🟡 ${day.completed}/${day.total}`
                 } else if (day.percentage > 0) {
-                  barColor = 'bg-orange-400'
-                  labelColor = 'text-orange-500'
+                  barColor = 'bg-orange-400 dark:bg-orange-400'
+                  labelColor = 'text-orange-500 dark:text-orange-400'
                   barLabel = `🟠 ${day.completed}/${day.total}`
                 } else {
-                  barColor = 'bg-rose-400'
-                  labelColor = 'text-rose-400'
+                  barColor = 'bg-rose-400 dark:bg-rose-400'
+                  labelColor = 'text-rose-400 dark:text-rose-400'
                   barLabel = `❌ ${day.completed}/${day.total}`
                 }
               }
 
               return (
                 <div key={i} className="flex-1 flex flex-col items-center h-full">
-                  {/* Bar container */}
                   <div className="w-full h-40 relative flex items-end">
-                    {/* Bar */}
                     <div 
                       className={`w-full rounded-t-lg transition-all duration-700 ease-out ${barColor}`}
                       style={{ 
@@ -342,22 +357,19 @@ export default function Analytics() {
                         opacity: day.hasEntries || day.isFuture ? 1 : 0.3
                       }}
                     >
-                      {/* Percentage label inside bar */}
                       {day.hasEntries && barHeight > 30 && (
-                        <div className="absolute -top-5 w-full text-center text-[11px] font-bold text-gray-700">
+                        <div className="absolute -top-5 w-full text-center text-[11px] font-bold text-gray-600 dark:text-gray-300">
                           {day.percentage}%
                         </div>
                       )}
                     </div>
                   </div>
                   
-                  {/* Bar label */}
                   <div className={`text-[9px] font-medium mt-1 ${labelColor} h-3`}>
                     {barLabel}
                   </div>
                   
-                  {/* Day label */}
-                  <span className={`text-xs font-medium mt-1 ${isToday ? 'text-indigo-600 font-bold' : day.isFuture ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <span className={`text-xs font-medium mt-1 ${isToday ? 'text-indigo-600 dark:text-indigo-400 font-bold' : day.isFuture ? 'text-gray-300 dark:text-gray-600' : 'text-gray-600 dark:text-gray-400'}`}>
                     {day.day}
                     {isToday && ' • Today'}
                   </span>
@@ -366,8 +378,7 @@ export default function Analytics() {
             })}
           </div>
 
-          {/* Legend */}
-          <div className="flex justify-center gap-3 mt-6 text-[10px] text-gray-400 flex-wrap">
+          <div className="flex justify-center gap-3 mt-6 text-[10px] text-gray-400 dark:text-gray-500 flex-wrap">
             <span className="flex items-center gap-1">
               <span className="w-3 h-3 bg-emerald-500 rounded-full"></span> 100%
             </span>
@@ -381,26 +392,26 @@ export default function Analytics() {
               <span className="w-3 h-3 bg-rose-400 rounded-full"></span> 0%
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-gray-200 rounded-full"></span> No Data
+              <span className="w-3 h-3 bg-gray-200 dark:bg-gray-700 rounded-full"></span> No Data
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-gray-100 rounded-full"></span> 🗓️ Future
+              <span className="w-3 h-3 bg-gray-100 dark:bg-gray-800 rounded-full"></span> 📅 Future
             </span>
           </div>
         </div>
 
         {/* MONTHLY HEATMAP */}
-        <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-white/50 mb-4">
-          <h2 className="text-sm font-semibold text-gray-600 mb-3">🗓️ Monthly Progress</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">🗓️ Monthly Progress</h2>
           <div className="grid grid-cols-7 gap-1">
             {monthlyData.map((day, i) => {
-              const dotColor = day.status === 'all-done' ? 'bg-emerald-500' 
-                : day.status === 'partial' ? 'bg-amber-500' : 'bg-gray-200'
+              const dotColor = day.status === 'all-done' ? 'bg-emerald-500 dark:bg-emerald-400' 
+                : day.status === 'partial' ? 'bg-amber-500 dark:bg-amber-400' : 'bg-gray-200 dark:bg-gray-700'
               
               return (
                 <div key={i} className="flex flex-col items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${dotColor}`}>
-                    <span className={`text-[10px] font-medium ${day.status === 'missed' ? 'text-gray-400' : 'text-white'}`}>
+                    <span className={`text-[10px] font-medium ${day.status === 'missed' ? 'text-gray-400 dark:text-gray-500' : 'text-white'}`}>
                       {day.day}
                     </span>
                   </div>
@@ -408,7 +419,7 @@ export default function Analytics() {
               )
             })}
           </div>
-          <div className="flex justify-center gap-4 mt-3 text-xs text-gray-500">
+          <div className="flex justify-center gap-4 mt-3 text-xs text-gray-500 dark:text-gray-400">
             <span>🟢 All Done</span>
             <span>🟡 Partial</span>
             <span>⬜ Missed</span>
@@ -417,21 +428,21 @@ export default function Analytics() {
 
         {/* STATS CARDS */}
         <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-white/50 text-center">
-            <div className="text-2xl font-bold text-orange-500">{stats.bestStreak}d</div>
-            <div className="text-xs text-gray-500">🏆 Best Streak</div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 text-center">
+            <div className="text-2xl font-bold text-orange-500 dark:text-orange-400">{stats.bestStreak}d</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">🏆 Best Streak</div>
           </div>
-          <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-white/50 text-center">
-            <div className="text-2xl font-bold text-purple-500">{stats.totalCompletions}</div>
-            <div className="text-xs text-gray-500">✅ Total Done</div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 text-center">
+            <div className="text-2xl font-bold text-purple-500 dark:text-purple-400">{stats.totalCompletions}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">✅ Total Done</div>
           </div>
-          <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-white/50 text-center">
-            <div className="text-2xl font-bold text-emerald-500">{stats.consistency}%</div>
-            <div className="text-xs text-gray-500">📊 Consistency</div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 text-center">
+            <div className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">{stats.consistency}%</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">📊 Consistency</div>
           </div>
-          <div className="bg-white/40 backdrop-blur-xl rounded-2xl p-4 shadow-lg border border-white/50 text-center">
-            <div className="text-2xl font-bold text-indigo-500">{weeklyData.filter(d => d.percentage === 100 && d.hasEntries).length}/7</div>
-            <div className="text-xs text-gray-500">🗓️ Perfect Days</div>
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 text-center">
+            <div className="text-2xl font-bold text-indigo-500 dark:text-indigo-400">{weeklyData.filter(d => d.percentage === 100 && d.hasEntries).length}/7</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">📅 Perfect Days</div>
           </div>
         </div>
 
