@@ -225,11 +225,26 @@ export default function Home() {
             </h1>
             <p className="text-gray-500 text-sm">{dateDisplay}</p>
           </div>
-          <div className="flex gap-2">
-            <Link href="/analytics" className="text-2xl p-2 hover:bg-gray-200 rounded-full transition">
+          <div className="flex gap-1">
+            <Link 
+              href="/calendar" 
+              className="text-2xl p-2 hover:bg-gray-200 rounded-full transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
+              📅
+            </Link>
+            <Link 
+              href="/analytics" 
+              className="text-2xl p-2 hover:bg-gray-200 rounded-full transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
               📊
             </Link>
-            <Link href="/settings" className="text-2xl p-2 hover:bg-gray-200 rounded-full transition">
+            <Link 
+              href="/settings" 
+              className="text-2xl p-2 hover:bg-gray-200 rounded-full transition-colors"
+              onClick={(e) => e.stopPropagation()}
+            >
               ⚙️
             </Link>
           </div>
