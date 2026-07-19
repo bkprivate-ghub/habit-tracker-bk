@@ -203,70 +203,70 @@ export default function Home() {
     day: 'numeric' 
   })
 
-  // Floating animation backgrounds
-  const floatingEmojis = ['✨', '🌸', '🌺', '🌻', '🌟', '💫', '🌈', '🦋']
+  // Clean floating elements - unisex
+  const floatingElements = ['◈', '◇', '○', '●', '◆', '▣', '◉', '◎']
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-5xl mb-4 animate-bounce">✨</div>
-          <p className="text-gray-500 font-light">Loading your habits...</p>
+          <div className="text-4xl mb-4 animate-pulse text-gray-600 dark:text-gray-300">◆</div>
+          <p className="text-gray-500 dark:text-gray-400 font-light">Loading your habits...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 p-4 pb-20 overflow-hidden relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 overflow-hidden relative">
       
-      {/* Floating Background Elements */}
+      {/* Floating Background Elements - Subtle */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        {floatingEmojis.map((emoji, i) => (
+        {floatingElements.map((el, i) => (
           <div
             key={i}
-            className="absolute text-2xl opacity-20 animate-float"
+            className="absolute text-sm opacity-[0.04] dark:opacity-[0.06] animate-float"
             style={{
-              left: `${(i * 13) % 100}%`,
-              top: `${(i * 7 + 20) % 100}%`,
-              animationDuration: `${8 + (i % 5)}s`,
-              animationDelay: `${(i * 0.7) % 3}s`,
-              transform: `scale(${0.5 + (i % 3) * 0.3})`
+              left: `${(i * 11 + 7) % 100}%`,
+              top: `${(i * 13 + 5) % 100}%`,
+              animationDuration: `${12 + (i % 6)}s`,
+              animationDelay: `${(i * 0.5) % 4}s`,
+              transform: `scale(${0.6 + (i % 4) * 0.3})`
             }}
           >
-            {emoji}
+            {el}
           </div>
         ))}
       </div>
 
       <div className="max-w-md mx-auto relative z-10">
         
-        {/* Header - Aesthetic */}
+        {/* Header - Clean & Professional */}
         <div className="flex justify-between items-start mb-8">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-2xl animate-pulse">🌸</span>
-              <span className="text-xs font-light text-purple-400 tracking-widest uppercase">
+              <span className="text-base">◇</span>
+              <span className="text-xs font-light text-gray-400 dark:text-gray-500 tracking-widest uppercase">
                 {greeting}
               </span>
             </div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent flex items-center gap-3">
-              <span className="text-4xl animate-bounce">✨</span>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white flex items-center gap-3">
+              <span className="text-2xl text-gray-600 dark:text-gray-300">✦</span>
               Bharath K
             </h1>
-            <p className="text-sm text-gray-400 mt-1 font-light tracking-wide">
+            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1 font-light tracking-wide">
               {dateDisplay}
             </p>
           </div>
           
-          {/* Icons */}
-          <div className="flex gap-1 glassmorphism p-1 rounded-2xl backdrop-blur-lg bg-white/30">
+          {/* Icons - Clean SVG */}
+          <div className="flex gap-1 bg-white/50 dark:bg-gray-800/50 p-1 rounded-2xl backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30">
             <Link 
               href="/calendar" 
-              className="p-2.5 hover:bg-white/50 rounded-xl transition-all duration-300 hover:scale-110"
+              className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-300 hover:scale-105"
               onClick={(e) => e.stopPropagation()}
             >
-              <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
                 />
@@ -274,10 +274,10 @@ export default function Home() {
             </Link>
             <Link 
               href="/analytics" 
-              className="p-2.5 hover:bg-white/50 rounded-xl transition-all duration-300 hover:scale-110"
+              className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-300 hover:scale-105"
               onClick={(e) => e.stopPropagation()}
             >
-              <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
                 />
@@ -285,10 +285,10 @@ export default function Home() {
             </Link>
             <Link 
               href="/settings" 
-              className="p-2.5 hover:bg-white/50 rounded-xl transition-all duration-300 hover:scale-110"
+              className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all duration-300 hover:scale-105"
               onClick={(e) => e.stopPropagation()}
             >
-              <svg className="w-5 h-5 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                   d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" 
                 />
@@ -300,37 +300,31 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Progress Card - Glassmorphism */}
-        <div className="bg-white/40 backdrop-blur-xl rounded-3xl p-6 shadow-xl border border-white/50 mb-6 relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 text-8xl opacity-5">✨</div>
+        {/* Progress Card */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-6 relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 text-7xl opacity-[0.03] dark:opacity-[0.05]">◈</div>
           <div className="flex items-center justify-between relative z-10">
             <div>
-              <p className="text-sm font-light text-gray-500">Today's Progress</p>
-              <p className="text-4xl font-bold bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
+              <p className="text-sm font-light text-gray-500 dark:text-gray-400">Today's Progress</p>
+              <p className="text-4xl font-bold text-gray-800 dark:text-white">
                 {progress}%
               </p>
-              <p className="text-xs text-gray-400 mt-1">{completed} of {total} habits done</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{completed} of {total} habits done</p>
             </div>
             <div className="relative w-20 h-20">
               <svg className="transform -rotate-90 w-20 h-20">
-                <circle cx="40" cy="40" r="32" fill="none" stroke="#E5E7EB" strokeWidth="6"/>
+                <circle cx="40" cy="40" r="32" fill="none" stroke="#E5E7EB" className="dark:stroke-gray-700" strokeWidth="6"/>
                 <circle 
                   cx="40" cy="40" r="32" 
                   fill="none" 
-                  stroke="url(#progressGradient)" 
+                  stroke="#6366F1" 
                   strokeWidth="6"
                   strokeDasharray={`${progress * 2.01} 201`}
                   strokeLinecap="round"
                   className="transition-all duration-1000"
                 />
-                <defs>
-                  <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#6366F1" />
-                    <stop offset="100%" stopColor="#A855F7" />
-                  </linearGradient>
-                </defs>
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-indigo-600">
+              <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-gray-700 dark:text-gray-200">
                 {progress}%
               </span>
             </div>
@@ -340,32 +334,32 @@ export default function Home() {
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
-            { value: completed, label: 'Done', color: 'text-emerald-500', bg: 'bg-emerald-50/50' },
-            { value: habits.filter(h => !getIsDone(h.id)).length, label: 'Remaining', color: 'text-amber-500', bg: 'bg-amber-50/50' },
-            { value: activeStreaks, label: '🔥 Streaks', color: 'text-orange-500', bg: 'bg-orange-50/50' },
+            { value: completed, label: 'Done', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+            { value: habits.filter(h => !getIsDone(h.id)).length, label: 'Remaining', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+            { value: activeStreaks, label: 'Streaks', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20' },
           ].map((stat, i) => (
-            <div key={i} className={`${stat.bg} backdrop-blur-sm p-3 rounded-2xl shadow-sm text-center border border-white/40 transition-all hover:scale-105 duration-300`}>
+            <div key={i} className={`${stat.bg} p-3 rounded-2xl text-center border border-gray-200/30 dark:border-gray-700/30 transition-all hover:scale-105 duration-300`}>
               <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
-              <div className="text-xs text-gray-400 font-light">{stat.label}</div>
+              <div className="text-xs text-gray-400 dark:text-gray-500 font-light">{stat.label}</div>
             </div>
           ))}
         </div>
 
-        {/* Best Streak Card - Glowing */}
+        {/* Best Streak Card */}
         {bestStreak > 0 && (
-          <div className="bg-gradient-to-r from-amber-50/80 via-orange-50/80 to-rose-50/80 backdrop-blur-sm border border-amber-200/50 rounded-2xl p-4 mb-6 flex items-center justify-between shadow-lg animate-pulse">
+          <div className="bg-gradient-to-r from-amber-50/80 to-orange-50/80 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200/50 dark:border-amber-800/30 rounded-2xl p-4 mb-6 flex items-center justify-between">
             <div>
-              <p className="text-sm text-amber-600 font-medium">🏆 Best Streak</p>
-              <p className="text-2xl font-bold text-amber-600">{bestStreak} days</p>
+              <p className="text-sm text-amber-600 dark:text-amber-400 font-medium">Best Streak</p>
+              <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{bestStreak} days</p>
             </div>
-            <div className="text-5xl animate-bounce">🔥</div>
+            <div className="text-4xl">🔥</div>
           </div>
         )}
 
         {/* Habits Section */}
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-semibold text-gray-500 tracking-wide">✨ Today's Habits</h2>
-          <span className="text-xs text-gray-400">{habits.length} active</span>
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 tracking-wide">Today's Habits</h2>
+          <span className="text-xs text-gray-400 dark:text-gray-500">{habits.length} active</span>
         </div>
         
         <div className="space-y-2.5">
@@ -378,10 +372,10 @@ export default function Home() {
               <div 
                 key={habit.id}
                 onClick={() => !isToggling && toggleHabit(habit.id)}
-                className={`group relative p-4 rounded-2xl backdrop-blur-sm transition-all duration-300 cursor-pointer
+                className={`group relative p-4 rounded-2xl transition-all duration-300 cursor-pointer border
                   ${isDone 
-                    ? 'bg-emerald-50/60 border border-emerald-200/50 shadow-sm' 
-                    : 'bg-white/40 border border-white/50 shadow-sm hover:shadow-md hover:scale-[1.02]'
+                    ? 'bg-emerald-50/80 dark:bg-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30' 
+                    : 'bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50 hover:shadow-md hover:scale-[1.01]'
                   }
                   ${isToggling ? 'opacity-50' : 'opacity-100'}`}
               >
@@ -389,17 +383,17 @@ export default function Home() {
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{habit.name.split(' ')[0]}</span>
                     <div>
-                      <span className={`font-medium ${isDone ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                      <span className={`font-medium ${isDone ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200'}`}>
                         {habit.name}
                       </span>
                       {streak > 0 && (
-                        <span className="ml-2 text-xs text-orange-500 font-medium animate-pulse">
+                        <span className="ml-2 text-xs text-orange-500 dark:text-orange-400 font-medium">
                           🔥 {streak}d
                         </span>
                       )}
                       {streak === 0 && isDone && (
-                        <span className="ml-2 text-xs text-gray-400 font-medium">
-                          ✨ 1d
+                        <span className="ml-2 text-xs text-gray-400 dark:text-gray-500 font-medium">
+                          ✦ 1d
                         </span>
                       )}
                     </div>
@@ -414,7 +408,7 @@ export default function Home() {
                     )}
                   </div>
                 </div>
-                {/* Glow effect on hover */}
+                {/* Subtle hover glow */}
                 <div className={`absolute inset-0 rounded-2xl transition-opacity duration-300 pointer-events-none
                   ${isDone ? 'bg-emerald-400/5' : 'bg-indigo-400/5'} opacity-0 group-hover:opacity-100`} />
               </div>
@@ -422,27 +416,26 @@ export default function Home() {
           })}
         </div>
 
-        {/* Add Habit Button - Aesthetic */}
+        {/* Add Habit Button */}
         {!showAddForm ? (
           <button 
             onClick={() => setShowAddForm(true)}
-            className="w-full mt-6 py-3.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white rounded-2xl font-medium shadow-lg shadow-purple-200/50 hover:shadow-xl hover:shadow-purple-300/50 transition-all duration-300 hover:scale-[1.02] active:scale-95 relative overflow-hidden group"
+            className="w-full mt-6 py-3.5 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 text-white rounded-2xl font-medium shadow-lg shadow-indigo-200/50 dark:shadow-indigo-900/30 transition-all duration-300 hover:scale-[1.02] active:scale-95"
           >
-            <span className="relative z-10 flex items-center justify-center gap-2">
-              <span className="text-xl group-hover:rotate-90 transition-transform duration-500">✦</span>
+            <span className="flex items-center justify-center gap-2">
+              <span className="text-xl">✦</span>
               Add New Habit
-              <span className="text-xl group-hover:rotate-90 transition-transform duration-500">✦</span>
+              <span className="text-xl">✦</span>
             </span>
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </button>
         ) : (
-          <div className="mt-6 bg-white/40 backdrop-blur-xl rounded-2xl p-5 shadow-xl border border-white/50">
+          <div className="mt-6 bg-white dark:bg-gray-800 rounded-2xl p-5 shadow-lg dark:shadow-gray-900/30 border border-gray-200 dark:border-gray-700">
             <input
               type="text"
-              placeholder="✨ What habit to build?"
+              placeholder="What habit to build?"
               value={newHabitName}
               onChange={(e) => setNewHabitName(e.target.value)}
-              className="w-full p-3 bg-white/50 backdrop-blur-sm border border-gray-200/50 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all"
+              className="w-full p-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-xl mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:focus:ring-indigo-500 transition-all text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500"
               autoFocus
             />
             <div className="flex gap-2 flex-wrap mb-3">
@@ -451,7 +444,7 @@ export default function Home() {
                   key={emoji}
                   onClick={() => setSelectedEmoji(emoji)}
                   className={`text-2xl p-2 rounded-xl transition-all duration-300 hover:scale-110
-                    ${selectedEmoji === emoji ? 'bg-purple-100 ring-2 ring-purple-400 shadow-md' : 'hover:bg-white/50'}`}
+                    ${selectedEmoji === emoji ? 'bg-indigo-100 dark:bg-indigo-900/40 ring-2 ring-indigo-400 dark:ring-indigo-500 shadow-md' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}
                 >
                   {emoji}
                 </button>
@@ -460,13 +453,13 @@ export default function Home() {
             <div className="flex gap-2">
               <button
                 onClick={addHabit}
-                className="flex-1 py-2.5 bg-gradient-to-r from-emerald-400 to-teal-400 text-white rounded-xl font-medium hover:shadow-lg transition-all hover:scale-[1.02]"
+                className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600 text-white rounded-xl font-medium transition-all hover:scale-[1.02]"
               >
-                ✨ Add Habit
+                ✦ Add Habit
               </button>
               <button
                 onClick={() => setShowAddForm(false)}
-                className="flex-1 py-2.5 bg-gray-200/50 backdrop-blur-sm text-gray-600 rounded-xl font-medium hover:bg-gray-300/50 transition-all"
+                className="flex-1 py-2.5 bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-xl font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-all"
               >
                 Cancel
               </button>
@@ -478,14 +471,10 @@ export default function Home() {
       <style jsx>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
-          50% { transform: translateY(-20px) rotate(5deg); }
+          50% { transform: translateY(-15px) rotate(3deg); }
         }
         .animate-float {
           animation: float ease-in-out infinite;
-        }
-        .glassmorphism {
-          backdrop-filter: blur(16px);
-          -webkit-backdrop-filter: blur(16px);
         }
       `}</style>
     </div>
