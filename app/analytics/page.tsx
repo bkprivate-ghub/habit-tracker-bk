@@ -258,7 +258,7 @@ export default function Analytics() {
 
         {/* TODAY */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">📅 Today</h2>
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">3">🗓️ Today</h2>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-3xl font-bold text-gray-800 dark:text-white">
@@ -324,7 +324,7 @@ export default function Analytics() {
               
               if (day.isFuture) {
                 barColor = 'bg-gray-100 dark:bg-gray-800'
-                barLabel = '📅'
+                barLabel = '3">🗓️'
                 labelColor = 'text-gray-300 dark:text-gray-600'
               } else if (day.hasEntries) {
                 if (day.percentage === 100) {
@@ -395,7 +395,7 @@ export default function Analytics() {
               <span className="w-3 h-3 bg-gray-200 dark:bg-gray-700 rounded-full"></span> No Data
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-gray-100 dark:bg-gray-800 rounded-full"></span> 📅 Future
+              <span className="w-3 h-3 bg-gray-100 dark:bg-gray-800 rounded-full"></span> 3">🗓️ Future
             </span>
           </div>
         </div>
