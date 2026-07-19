@@ -3,12 +3,10 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from './lib/supabase'
-import { calculateStreak } from './lib/streak'
 
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([])
   const [dailyEntries, setDailyEntries] = useState<any[]>([])
-  const [streaks, setStreaks] = useState<Record<string, { current: number, longest: number }>>({})
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newHabitName, setNewHabitName] = useState('')
@@ -24,111 +22,92 @@ export default function Home() {
     if (hour < 12) g = 'Good Morning'
     else if (hour < 17) g = 'Good Afternoon'
     setGreeting(g)
-  }, [])
-
-  useEffect(() => {
     loadHabits()
   }, [])
 
   const loadHabits = async () => {
     setLoading(true)
+    console.log('🔄 Loading habits...')
+    
     const { data, error } = await supabase
       .from('habits')
       .select('*')
       .order('created_at', { ascending: true })
     
     if (error) {
-      console.error('Error loading habits:', error)
+      console.error('❌ Error loading habits:', error)
     } else if (data) {
+      console.log('✅ Habits loaded:', data)
       setHabits(data)
-      await loadDailyEntries(data)
-      await loadStreaks(data)
+      await loadDailyEntries()
     }
     setLoading(false)
   }
 
-  const loadDailyEntries = async (habitsData: any[]) => {
-    const { data } = await supabase
+  const loadDailyEntries = async () => {
+    console.log('🔄 Loading daily entries for:', today)
+    const { data, error } = await supabase
       .from('daily_entries')
       .select('*')
       .eq('date', today)
     
-    if (data) {
-      setDailyEntries(data)
+    if (error) {
+      console.error('❌ Error loading daily entries:', error)
     } else {
-      setDailyEntries([])
+      console.log('✅ Daily entries loaded:', data)
+      setDailyEntries(data || [])
     }
   }
 
-  const loadStreaks = async (habitsData: any[]) => {
-    const streakData: Record<string, { current: number, longest: number }> = {}
+  const toggleHabit = async (habitId: string) => {
+    console.log('🔄 Toggling habit:', habitId)
     
-    for (const habit of habitsData) {
-      const { data: entries } = await supabase
-        .from('daily_entries')
-        .select('*')
-        .eq('habit_id', habit.id)
-        .order('date', { ascending: false })
-      
-      if (entries && entries.length > 0) {
-        const streak = calculateStreak(entries)
-        streakData[habit.id] = streak
-      } else {
-        streakData[habit.id] = { current: 0, longest: 0 }
-      }
-    }
-    setStreaks(streakData)
-  }
-
-  const toggleHabit = async (id: string) => {
-    // Get current status
-    const currentEntry = dailyEntries.find(e => e.habit_id === id && e.date === today)
-    const isDone = currentEntry?.status === 'completed'
-    const newStatus = isDone ? 'pending' : 'completed'
+    // Check current status
+    const existingEntry = dailyEntries.find(e => e.habit_id === habitId)
+    const isCurrentlyDone = existingEntry?.status === 'completed'
+    const newStatus = isCurrentlyDone ? 'pending' : 'completed'
     
-    // Update daily entry
-    const { error } = await supabase
+    console.log('📊 Current status:', isCurrentlyDone ? 'completed' : 'pending')
+    console.log('📊 New status:', newStatus)
+    
+    // Update daily_entries
+    const { error: entryError } = await supabase
       .from('daily_entries')
       .upsert({
-        habit_id: id,
+        habit_id: habitId,
         date: today,
         status: newStatus,
-        completed_at: !isDone ? new Date().toISOString() : null
+        completed_at: !isCurrentlyDone ? new Date().toISOString() : null
       })
     
-    if (!error) {
-      // Update local state
-      if (isDone) {
-        // Remove the entry or mark as pending
-        setDailyEntries(prev => {
-          const filtered = prev.filter(e => !(e.habit_id === id && e.date === today))
-          return filtered
-        })
-      } else {
-        // Add the entry
-        setDailyEntries(prev => {
-          const existing = prev.find(e => e.habit_id === id && e.date === today)
-          if (existing) {
-            return prev.map(e => 
-              e.habit_id === id && e.date === today 
-                ? { ...e, status: newStatus }
-                : e
-            )
-          } else {
-            return [...prev, { habit_id: id, date: today, status: newStatus }]
-          }
-        })
-      }
-      
-      // Also update the habits table for quick reference
-      await supabase
-        .from('habits')
-        .update({ done: !isDone })
-        .eq('id', id)
-      
-      // Reload streaks
-      await loadStreaks(habits)
+    if (entryError) {
+      console.error('❌ Error updating daily entry:', entryError)
+      return
     }
+    
+    console.log('✅ Daily entry updated')
+    
+    // Update habits table
+    const { error: habitError } = await supabase
+      .from('habits')
+      .update({ done: !isCurrentlyDone })
+      .eq('id', habitId)
+    
+    if (habitError) {
+      console.error('❌ Error updating habit:', habitError)
+      return
+    }
+    
+    console.log('✅ Habit updated')
+    
+    // Reload data
+    await loadDailyEntries()
+    await loadHabits()
+  }
+
+  const getIsDone = (habitId: string) => {
+    const entry = dailyEntries.find(e => e.habit_id === habitId)
+    return entry?.status === 'completed'
   }
 
   const addHabit = async () => {
@@ -144,23 +123,12 @@ export default function Home() {
       setHabits([...habits, data[0]])
       setNewHabitName('')
       setShowAddForm(false)
-      await loadStreaks([...habits, data[0]])
     }
   }
 
-  const getHabitStatus = (habitId: string) => {
-    const entry = dailyEntries.find(e => e.habit_id === habitId && e.date === today)
-    return entry?.status === 'completed'
-  }
-
   const total = habits.length
-  const completed = habits.filter(h => getHabitStatus(h.id)).length
+  const completed = habits.filter(h => getIsDone(h.id)).length
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
-
-  // Calculate total streak safely
-  const totalStreak = Object.values(streaks).reduce((sum, s) => {
-    return sum + (s?.current || 0)
-  }, 0)
 
   const dateDisplay = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -227,23 +195,20 @@ export default function Home() {
           </div>
           <div className="bg-white p-3 rounded-xl shadow text-center">
             <div className="text-2xl font-bold text-yellow-500">
-              {habits.filter(h => !getHabitStatus(h.id)).length}
+              {habits.filter(h => !getIsDone(h.id)).length}
             </div>
             <div className="text-xs text-gray-500">Remaining</div>
           </div>
           <div className="bg-white p-3 rounded-xl shadow text-center">
-            <div className="text-2xl font-bold text-orange-500">
-              {totalStreak}
-            </div>
-            <div className="text-xs text-gray-500">Total Streak</div>
+            <div className="text-2xl font-bold text-orange-500">0</div>
+            <div className="text-xs text-gray-500">Streak</div>
           </div>
         </div>
 
         <h2 className="text-sm font-semibold text-gray-600 mb-3">Today's Habits</h2>
         
         {habits.map((habit) => {
-          const isDone = getHabitStatus(habit.id)
-          const streak = streaks[habit.id] || { current: 0, longest: 0 }
+          const isDone = getIsDone(habit.id)
           return (
             <div 
               key={habit.id}
@@ -252,16 +217,9 @@ export default function Home() {
                 ${isDone ? 'border-green-500 bg-green-50/50' : 'border-blue-500'}`}
             >
               <div className="flex items-center justify-between">
-                <div>
-                  <span className={`${isDone ? 'line-through text-gray-400' : 'text-gray-700'}`}>
-                    {habit.name}
-                  </span>
-                  {streak.current > 0 && (
-                    <span className="ml-2 text-xs text-orange-500 font-medium">
-                      🔥 {streak.current}d
-                    </span>
-                  )}
-                </div>
+                <span className={`${isDone ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                  {habit.name}
+                </span>
                 <span className="text-xl">{isDone ? '✅' : '◻️'}</span>
               </div>
             </div>
