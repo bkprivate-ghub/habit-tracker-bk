@@ -258,7 +258,7 @@ export default function Analytics() {
 
         {/* TODAY */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">3">🗓️ Today</h2>
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-2">🗓️ Today</h2>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-3xl font-bold text-gray-800 dark:text-white">
