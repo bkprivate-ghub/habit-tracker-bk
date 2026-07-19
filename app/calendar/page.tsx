@@ -20,7 +20,6 @@ export default function Calendar() {
   const loadCalendarData = async () => {
     setLoading(true)
 
-    // Get habits
     const { data: habitsData } = await supabase
       .from('habits')
       .select('*')
@@ -31,7 +30,6 @@ export default function Calendar() {
     }
     setHabits(habitsData)
 
-    // Get entries for the month
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
     const firstDay = new Date(year, month, 1)
@@ -55,18 +53,15 @@ export default function Calendar() {
     })
     setEntriesMap(map)
 
-    // Build calendar grid
     const daysInMonth = lastDay.getDate()
-    const startDayOfWeek = firstDay.getDay() // 0 = Sunday, 1 = Monday, etc.
+    const startDayOfWeek = firstDay.getDay()
     
     const days = []
     
-    // Empty cells before first day
     for (let i = 0; i < startDayOfWeek; i++) {
       days.push({ day: null, date: null, status: 'empty' })
     }
     
-    // Days of the month
     const today = new Date().toISOString().split('T')[0]
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d)
@@ -117,20 +112,9 @@ export default function Calendar() {
       case 'all-done': return '🟢'
       case 'partial': return '🟡'
       case 'missed': return '🔴'
-      case 'pending': return '⏳'
-      case 'future': return '⚪'
-      default: return '⬜'
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'all-done': return 'All done!'
-      case 'partial': return 'Partial'
-      case 'missed': return 'Missed'
-      case 'pending': return 'In progress'
-      case 'future': return 'Future'
-      default: return ''
+      case 'pending': return '◈'
+      case 'future': return '○'
+      default: return '○'
     }
   }
 
@@ -139,53 +123,53 @@ export default function Calendar() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4 animate-pulse">🗓️</div>
-          <p className="text-gray-500">Loading calendar...</p>
+          <div className="text-4xl mb-4 animate-pulse text-gray-600 dark:text-gray-300">◆</div>
+          <p className="text-gray-500 dark:text-gray-400 font-light">Loading calendar...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 pb-20">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20">
       <div className="max-w-md mx-auto">
         
         <div className="flex justify-between items-center mb-6">
           <div>
-            <Link href="/" className="text-blue-500 text-sm mb-1 inline-block">
+            <Link href="/" className="text-indigo-600 dark:text-indigo-400 text-sm mb-1 inline-block hover:text-indigo-700 dark:hover:text-indigo-300 transition">
               ← Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800">🗓️ Calendar</h1>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">🗓️ Calendar</h1>
           </div>
         </div>
 
         {/* Month Navigation */}
-        <div className="flex items-center justify-between bg-white rounded-2xl p-4 shadow mb-4">
+        <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
           <button 
             onClick={() => changeMonth(-1)}
-            className="text-2xl p-2 hover:bg-gray-100 rounded-full transition"
+            className="text-2xl p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition text-gray-600 dark:text-gray-300"
           >
             ◀
           </button>
-          <h2 className="text-lg font-semibold text-gray-800">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h2>
           <button 
             onClick={() => changeMonth(1)}
-            className="text-2xl p-2 hover:bg-gray-100 rounded-full transition"
+            className="text-2xl p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition text-gray-600 dark:text-gray-300"
           >
             ▶
           </button>
         </div>
 
         {/* Calendar Grid */}
-        <div className="bg-white rounded-2xl p-4 shadow mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
           {/* Day Names */}
           <div className="grid grid-cols-7 gap-1 mb-2">
             {dayNames.map((day, i) => (
-              <div key={i} className="text-center text-xs font-medium text-gray-500 py-1">
+              <div key={i} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1">
                 {day}
               </div>
             ))}
@@ -201,30 +185,44 @@ export default function Calendar() {
               const isToday = day.date === new Date().toISOString().split('T')[0]
               const isSelected = day.date === selectedDay
               
+              let bgColor = 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+              let borderColor = 'border-transparent'
+              
+              if (day.status === 'all-done') {
+                bgColor = 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+              } else if (day.status === 'partial') {
+                bgColor = 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+              } else if (day.status === 'missed') {
+                bgColor = 'bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30'
+              } else if (day.status === 'future') {
+                bgColor = 'bg-gray-50 dark:bg-gray-800/50'
+              }
+              
               return (
                 <button
                   key={i}
                   onClick={() => handleDayClick(day)}
                   className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all
-                    ${day.status === 'empty' ? '' : 'hover:scale-105'}
-                    ${isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : ''}
-                    ${isToday ? 'border-2 border-blue-500' : ''}
+                    ${bgColor}
+                    ${isSelected ? 'ring-2 ring-indigo-400 dark:ring-indigo-500 shadow-md' : ''}
+                    ${isToday ? 'border-2 border-indigo-400 dark:border-indigo-500' : borderColor}
+                    hover:scale-105
                   `}
                 >
                   <span className={`text-sm font-medium
-                    ${day.status === 'all-done' ? 'text-green-600' : ''}
-                    ${day.status === 'partial' ? 'text-yellow-600' : ''}
-                    ${day.status === 'missed' ? 'text-red-500' : ''}
-                    ${day.status === 'future' ? 'text-gray-400' : ''}
-                    ${day.status === 'pending' ? 'text-blue-500' : ''}
+                    ${day.status === 'all-done' ? 'text-emerald-600 dark:text-emerald-400' : ''}
+                    ${day.status === 'partial' ? 'text-amber-600 dark:text-amber-400' : ''}
+                    ${day.status === 'missed' ? 'text-rose-500 dark:text-rose-400' : ''}
+                    ${day.status === 'future' ? 'text-gray-400 dark:text-gray-500' : ''}
+                    ${day.status === 'pending' ? 'text-indigo-500 dark:text-indigo-400' : ''}
                   `}>
                     {day.day}
                   </span>
-                  <span className="text-xs">
+                  <span className="text-xs mt-0.5">
                     {getStatusEmoji(day.status)}
                   </span>
-                  {day.status !== 'future' && day.status !== 'empty' && (
-                    <span className="text-[8px] text-gray-400">
+                  {day.status !== 'future' && day.status !== 'empty' && day.status !== 'pending' && (
+                    <span className="text-[8px] text-gray-400 dark:text-gray-500 mt-0.5">
                       {day.completed}/{day.total}
                     </span>
                   )}
@@ -235,18 +233,18 @@ export default function Calendar() {
         </div>
 
         {/* Legend */}
-        <div className="flex justify-center gap-4 text-xs text-gray-500 mb-4">
+        <div className="flex justify-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
           <span>🟢 All Done</span>
           <span>🟡 Partial</span>
           <span>🔴 Missed</span>
-          <span>⚪ Future</span>
+          <span>○ Future</span>
         </div>
 
         {/* Day Details */}
         {selectedDay && (
-          <div className="bg-white rounded-2xl p-4 shadow animate-slide-up">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 animate-slide-up">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold text-gray-800">
+              <h3 className="font-semibold text-gray-800 dark:text-white">
                 {new Date(selectedDay).toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   month: 'long', 
@@ -255,27 +253,27 @@ export default function Calendar() {
               </h3>
               <button 
                 onClick={() => setSelectedDay(null)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition"
               >
                 ✕
               </button>
             </div>
             
             {selectedDayDetails.length === 0 ? (
-              <p className="text-sm text-gray-500">No habits tracked this day</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">No habits tracked this day</p>
             ) : (
               <div className="space-y-1">
                 {selectedDayDetails.map((entry, i) => {
                   const habit = habits.find(h => h.id === entry.habit_id)
                   return (
-                    <div key={i} className="flex items-center justify-between py-1 border-b border-gray-100">
-                      <span className="text-sm text-gray-700">
+                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
                         {habit?.name || 'Unknown habit'}
                       </span>
                       <span className={`text-sm font-medium
-                        ${entry.status === 'completed' ? 'text-green-500' : 'text-gray-400'}`}
+                        ${entry.status === 'completed' ? 'text-emerald-500 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}
                       >
-                        {entry.status === 'completed' ? '✅' : '⬜'}
+                        {entry.status === 'completed' ? '✅' : '◻️'}
                       </span>
                     </div>
                   )
@@ -287,23 +285,23 @@ export default function Calendar() {
 
         {/* Quick Stats */}
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <div className="bg-white p-3 rounded-xl shadow text-center">
-            <div className="text-lg font-bold text-green-500">
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
               {calendarData.filter(d => d.status === 'all-done').length}
             </div>
-            <div className="text-xs text-gray-500">Perfect Days</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Perfect Days</div>
           </div>
-          <div className="bg-white p-3 rounded-xl shadow text-center">
-            <div className="text-lg font-bold text-yellow-500">
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+            <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
               {calendarData.filter(d => d.status === 'partial').length}
             </div>
-            <div className="text-xs text-gray-500">Partial Days</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Partial Days</div>
           </div>
-          <div className="bg-white p-3 rounded-xl shadow text-center">
-            <div className="text-lg font-bold text-red-500">
+          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
+            <div className="text-lg font-bold text-rose-500 dark:text-rose-400">
               {calendarData.filter(d => d.status === 'missed').length}
             </div>
-            <div className="text-xs text-gray-500">Missed Days</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">Missed Days</div>
           </div>
         </div>
 
