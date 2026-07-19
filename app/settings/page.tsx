@@ -26,14 +26,12 @@ export default function Settings() {
         .delete()
         .eq('habit_id', id)
       
-      const { error } = await supabase
+      await supabase
         .from('habits')
         .delete()
         .eq('id', id)
       
-      if (!error) {
-        setHabits(habits.filter(h => h.id !== id))
-      }
+      loadHabits()
     }
   }
 
