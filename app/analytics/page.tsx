@@ -16,6 +16,8 @@ export default function Analytics() {
     consistency: 0,
   })
   const [motivation, setMotivation] = useState('')
+  const [weekOffset, setWeekOffset] = useState(0) // 0 = current week, -1 = previous, etc.
+  const [weekLabel, setWeekLabel] = useState('')
 
   const motivationalQuotes = [
     { min: 0, max: 20, text: "💪 Every journey begins with a single step. Keep going!" },
@@ -28,7 +30,7 @@ export default function Analytics() {
 
   useEffect(() => {
     loadAnalytics()
-  }, [])
+  }, [weekOffset])
 
   const loadAnalytics = async () => {
     setLoading(true)
@@ -45,14 +47,15 @@ export default function Analytics() {
     const totalHabits = habits.length
     const today = new Date().toISOString().split('T')[0]
 
-    const sixtyDaysAgo = new Date()
-    sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60)
-    const sixtyDaysAgoStr = sixtyDaysAgo.toISOString().split('T')[0]
+    // Get last 90 days
+    const ninetyDaysAgo = new Date()
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0]
 
     const { data: entries } = await supabase
       .from('daily_entries')
       .select('*')
-      .gte('date', sixtyDaysAgoStr)
+      .gte('date', ninetyDaysAgoStr)
       .order('date', { ascending: true })
 
     const entriesMap = new Map()
@@ -68,19 +71,57 @@ export default function Analytics() {
     const todayCompleted = todayEntries.filter(e => e.status === 'completed').length
     setTodayData({ completed: todayCompleted, total: totalHabits })
 
-    // WEEKLY (Last 7 days)
+    // WEEKLY with offset
+    const todayDate = new Date()
+    const currentDay = todayDate.getDay() // 0 = Sunday
+    const startOfWeek = new Date(todayDate)
+    startOfWeek.setDate(todayDate.getDate() - currentDay + (weekOffset * 7))
+    
+    const endOfWeek = new Date(startOfWeek)
+    endOfWeek.setDate(startOfWeek.getDate() + 6)
+    
+    // Set week label
+    const startMonth = startOfWeek.toLocaleDateString('en-US', { month: 'short' })
+    const endMonth = endOfWeek.toLocaleDateString('en-US', { month: 'short' })
+    const startDay = startOfWeek.getDate()
+    const endDay = endOfWeek.getDate()
+    const year = startOfWeek.getFullYear()
+    
+    if (startMonth === endMonth) {
+      setWeekLabel(`${startMonth} ${startDay} - ${endDay}, ${year}`)
+    } else {
+      setWeekLabel(`${startMonth} ${startDay} - ${endMonth} ${endDay}, ${year}`)
+    }
+
     const weekData = []
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date()
-      date.setDate(date.getDate() - i)
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek)
+      date.setDate(startOfWeek.getDate() + i)
       const dateStr = date.toISOString().split('T')[0]
       const dayEntries = entriesMap.get(dateStr) || []
       const completed = dayEntries.filter(e => e.status === 'completed').length
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
       
+      const hasEntries = entriesMap.has(dateStr)
+      
       let status = 'missed'
-      if (completed === totalHabits) status = 'all-done'
-      else if (completed > 0) status = 'partial'
+      let displayText = '0/5'
+      
+      if (hasEntries) {
+        if (completed === totalHabits) {
+          status = 'all-done'
+          displayText = `${completed}/${totalHabits} ✅`
+        } else if (completed > 0) {
+          status = 'partial'
+          displayText = `${completed}/${totalHabits} 🟡`
+        } else {
+          status = 'missed'
+          displayText = `${completed}/${totalHabits} ❌`
+        }
+      } else {
+        status = 'no-data'
+        displayText = '—'
+      }
       
       weekData.push({
         day: dayName,
@@ -88,6 +129,9 @@ export default function Analytics() {
         completed,
         total: totalHabits,
         status,
+        displayText,
+        hasEntries,
+        isFuture: date > new Date(),
       })
     }
     setWeeklyData(weekData)
@@ -119,7 +163,7 @@ export default function Analytics() {
     // STATS
     let currentStreak = 0
     let checkDate = new Date()
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < 90; i++) {
       const dateStr = checkDate.toISOString().split('T')[0]
       const dayEntries = entriesMap.get(dateStr) || []
       const completed = dayEntries.filter(e => e.status === 'completed').length
@@ -167,11 +211,15 @@ export default function Analytics() {
       consistency,
     })
 
-    // Set motivation based on consistency
     const quote = motivationalQuotes.find(q => consistency >= q.min && consistency <= q.max)
     setMotivation(quote ? quote.text : "🌟 Keep going, you're doing great!")
 
     setLoading(false)
+  }
+
+  const goToPreviousWeek = () => setWeekOffset(weekOffset - 1)
+  const goToNextWeek = () => {
+    if (weekOffset < 0) setWeekOffset(weekOffset + 1)
   }
 
   if (loading) {
@@ -221,7 +269,7 @@ export default function Analytics() {
                   fill="none" 
                   stroke="#3B82F6" 
                   strokeWidth="5"
-                  strokeDasharray={`${(todayData.completed / todayData.total) * 176} 176`}
+                  strokeDasharray={`${todayData.total > 0 ? (todayData.completed / todayData.total) * 176 : 0} 176`}
                   strokeLinecap="round"
                   className="transition-all duration-500"
                 />
@@ -238,39 +286,82 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* WEEKLY BAR CHART */}
+        {/* WEEKLY with Navigation */}
         <div className="bg-white rounded-2xl p-4 shadow mb-4">
-          <h2 className="text-sm font-semibold text-gray-600 mb-3">📈 Weekly Progress</h2>
-          {weeklyData.every(d => d.completed === 0) ? (
-            <div className="text-center py-8 text-gray-400">
-              <p className="text-4xl mb-2">📭</p>
-              <p className="text-sm">No habits tracked this week yet</p>
-              <p className="text-xs">Start tracking to see your progress!</p>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-600">📈 Weekly Progress</h2>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={goToPreviousWeek}
+                className="text-lg p-1 hover:bg-gray-100 rounded-full transition"
+              >
+                ◀
+              </button>
+              <span className="text-xs font-medium text-gray-600">{weekLabel}</span>
+              <button 
+                onClick={goToNextWeek}
+                className={`text-lg p-1 rounded-full transition ${weekOffset >= 0 ? 'opacity-30' : 'hover:bg-gray-100'}`}
+                disabled={weekOffset >= 0}
+              >
+                ▶
+              </button>
             </div>
-          ) : (
-            <div className="flex items-end justify-between h-40 gap-1">
-              {weeklyData.map((day, i) => {
-                const height = day.total > 0 ? (day.completed / day.total) * 100 : 0
-                const barColor = day.completed === day.total ? 'bg-green-500' 
-                  : day.completed > 0 ? 'bg-yellow-500' : 'bg-gray-300'
-                
-                return (
-                  <div key={i} className="flex-1 flex flex-col items-center">
-                    <div className="w-full relative" style={{ height: '100%' }}>
+          </div>
+          
+          <div className="flex items-end justify-between h-44 gap-1">
+            {weeklyData.map((day, i) => {
+              const height = day.total > 0 ? (day.completed / day.total) * 100 : 0
+              
+              let barColor = 'bg-gray-200'
+              let labelColor = 'text-gray-400'
+              
+              if (day.isFuture) {
+                barColor = 'bg-gray-100'
+                labelColor = 'text-gray-300'
+              } else if (day.hasEntries) {
+                if (day.completed === day.total) {
+                  barColor = 'bg-green-500'
+                  labelColor = 'text-green-600'
+                } else if (day.completed > 0) {
+                  barColor = 'bg-yellow-500'
+                  labelColor = 'text-yellow-600'
+                } else {
+                  barColor = 'bg-red-300'
+                  labelColor = 'text-red-400'
+                }
+              }
+              
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center">
+                  <div className="w-full relative" style={{ height: '100%' }}>
+                    {day.isFuture ? (
+                      <div className="absolute bottom-0 w-full h-2 bg-gray-100 rounded-full"></div>
+                    ) : day.hasEntries ? (
                       <div 
                         className={`absolute bottom-0 w-full rounded-t-lg transition-all ${barColor}`}
-                        style={{ height: `${Math.max(height, 2)}%` }}
+                        style={{ height: `${Math.max(height, 4)}%` }}
                       ></div>
-                      <div className="absolute bottom-0 w-full text-center text-[10px] font-medium text-gray-600 -mb-5">
-                        {day.completed}/{day.total}
-                      </div>
+                    ) : (
+                      <div className="absolute bottom-0 w-full h-1 bg-gray-200 rounded-full opacity-30"></div>
+                    )}
+                    <div className={`absolute bottom-0 w-full text-center text-[10px] font-medium -mb-5 ${labelColor}`}>
+                      {day.isFuture ? '📅' : day.displayText}
                     </div>
-                    <span className="text-xs text-gray-500 mt-6">{day.day}</span>
                   </div>
-                )
-              })}
-            </div>
-          )}
+                  <span className={`text-xs mt-6 ${day.isFuture ? 'text-gray-300' : day.hasEntries ? 'text-gray-700' : 'text-gray-300'}`}>
+                    {day.day}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+          <div className="flex justify-center gap-4 mt-6 text-xs text-gray-400">
+            <span>🟢 All Done</span>
+            <span>🟡 Partial</span>
+            <span>🔴 Missed</span>
+            <span>— No Data</span>
+            <span>📅 Future</span>
+          </div>
         </div>
 
         {/* MONTHLY HEATMAP */}
@@ -284,7 +375,9 @@ export default function Analytics() {
               return (
                 <div key={i} className="flex flex-col items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${dotColor}`}>
-                    <span className="text-[10px] text-white font-medium">{day.day}</span>
+                    <span className={`text-[10px] font-medium ${day.status === 'missed' ? 'text-gray-400' : 'text-white'}`}>
+                      {day.day}
+                    </span>
                   </div>
                 </div>
               )
