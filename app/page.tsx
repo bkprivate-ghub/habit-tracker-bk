@@ -30,7 +30,6 @@ export default function Home() {
   const loadAllData = async () => {
     setLoading(true)
     
-    // Load habits
     const { data: habitsData } = await supabase
       .from('habits')
       .select('*')
@@ -39,7 +38,7 @@ export default function Home() {
     if (habitsData) {
       setHabits(habitsData)
       
-      // Load daily entries (last 30 days for streaks)
+      // Load last 30 days of entries
       const thirtyDaysAgo = new Date()
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
       const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
@@ -51,8 +50,6 @@ export default function Home() {
         .order('date', { ascending: false })
       
       setDailyEntries(entriesData || [])
-      
-      // Calculate streaks
       calculateStreaks(entriesData || [], habitsData)
     }
     
@@ -70,6 +67,25 @@ export default function Home() {
       let streak = 0
       let checkDate = new Date()
       
+      // Check today first
+      const todayStr = checkDate.toISOString().split('T')[0]
+      const todayEntry = habitEntries.find(e => e.date === todayStr)
+      
+      if (!todayEntry) {
+        // If today not completed, check if yesterday was
+        const yesterday = new Date()
+        yesterday.setDate(yesterday.getDate() - 1)
+        const yesterdayStr = yesterday.toISOString().split('T')[0]
+        const yesterdayEntry = habitEntries.find(e => e.date === yesterdayStr)
+        
+        if (!yesterdayEntry) {
+          streakMap[habit.id] = 0
+          continue
+        }
+        checkDate = yesterday
+      }
+      
+      // Count consecutive days
       for (let i = 0; i < 30; i++) {
         const dateStr = checkDate.toISOString().split('T')[0]
         const entry = habitEntries.find(e => e.date === dateStr)
@@ -89,14 +105,13 @@ export default function Home() {
   }
 
   const toggleHabit = async (habitId: string) => {
-    setTogglingId(habitId) // Show loading state
+    setTogglingId(habitId)
     
-    // Check if already done today
     const existing = dailyEntries.find(e => e.habit_id === habitId && e.date === today)
     const isDone = existing?.status === 'completed'
     const newStatus = isDone ? 'pending' : 'completed'
     
-    // Update UI immediately (optimistic update)
+    // Update UI immediately
     const updatedEntries = [...dailyEntries]
     const existingIndex = updatedEntries.findIndex(e => e.habit_id === habitId && e.date === today)
     
@@ -108,26 +123,32 @@ export default function Home() {
     
     setDailyEntries(updatedEntries)
     
-    // Update streaks immediately
-    const newStreaks = { ...streaks }
-    if (newStatus === 'completed') {
-      // Check if yesterday was completed
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().split('T')[0]
-      const yesterdayEntry = dailyEntries.find(e => e.habit_id === habitId && e.date === yesterdayStr)
-      
-      if (yesterdayEntry?.status === 'completed') {
-        newStreaks[habitId] = (streaks[habitId] || 0) + 1
-      } else {
-        newStreaks[habitId] = 1
-      }
-    } else {
-      newStreaks[habitId] = 0
-    }
-    setStreaks(newStreaks)
+    // Recalculate streak for this habit
+    const habitEntries = updatedEntries
+      .filter(e => e.habit_id === habitId && e.status === 'completed')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     
-    // Update in background
+    let streak = 0
+    let checkDate = new Date()
+    const todayStr = checkDate.toISOString().split('T')[0]
+    const todayEntry = habitEntries.find(e => e.date === todayStr)
+    
+    if (todayEntry) {
+      for (let i = 0; i < 30; i++) {
+        const dateStr = checkDate.toISOString().split('T')[0]
+        const entry = habitEntries.find(e => e.date === dateStr)
+        if (entry) {
+          streak++
+        } else {
+          break
+        }
+        checkDate.setDate(checkDate.getDate() - 1)
+      }
+    }
+    
+    setStreaks(prev => ({ ...prev, [habitId]: streak }))
+    
+    // Sync to database
     try {
       await supabase
         .from('daily_entries')
@@ -144,7 +165,6 @@ export default function Home() {
           completed_at: !isDone ? new Date().toISOString() : null
         })
       
-      // Also update habits table
       await supabase
         .from('habits')
         .update({ done: !isDone })
@@ -183,8 +203,9 @@ export default function Home() {
   const completed = habits.filter(h => getIsDone(h.id)).length
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
   
-  // Calculate total streak across all habits
-  const totalStreak = Object.values(streaks).reduce((sum, s) => sum + s, 0)
+  // Get best streak
+  const bestStreak = Math.max(...Object.values(streaks), 0)
+  const activeStreaks = Object.values(streaks).filter(s => s > 0).length
 
   const dateDisplay = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -256,10 +277,21 @@ export default function Home() {
             <div className="text-xs text-gray-500">Remaining</div>
           </div>
           <div className="bg-white p-3 rounded-xl shadow text-center">
-            <div className="text-2xl font-bold text-orange-500">{totalStreak}</div>
-            <div className="text-xs text-gray-500">Total Streak</div>
+            <div className="text-2xl font-bold text-orange-500">{activeStreaks}</div>
+            <div className="text-xs text-gray-500">🔥 Active Streaks</div>
           </div>
         </div>
+
+        {/* Best Streak Card */}
+        {bestStreak > 0 && (
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+            <div>
+              <p className="text-sm text-orange-600 font-medium">🏆 Best Streak</p>
+              <p className="text-2xl font-bold text-orange-600">{bestStreak} days</p>
+            </div>
+            <div className="text-4xl">🔥</div>
+          </div>
+        )}
 
         <h2 className="text-sm font-semibold text-gray-600 mb-3">Today's Habits</h2>
         
@@ -284,6 +316,11 @@ export default function Home() {
                   {streak > 0 && (
                     <span className="ml-2 text-xs text-orange-500 font-medium">
                       🔥 {streak}d
+                    </span>
+                  )}
+                  {streak === 0 && isDone && (
+                    <span className="ml-2 text-xs text-gray-400 font-medium">
+                      📌 1d
                     </span>
                   )}
                 </div>
