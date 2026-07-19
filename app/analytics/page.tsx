@@ -58,7 +58,7 @@ export default function Analytics() {
       .order('date', { ascending: true })
 
     const entriesMap = new Map()
-    entries?.forEach(e => {
+    entries?.forEach((e: any) => {
       if (!entriesMap.has(e.date)) {
         entriesMap.set(e.date, [])
       }
@@ -67,7 +67,7 @@ export default function Analytics() {
 
     // TODAY
     const todayEntries = entriesMap.get(today) || []
-    const todayCompleted = todayEntries.filter(e => e.status === 'completed').length
+    const todayCompleted = todayEntries.filter((e: any) => e.status === 'completed').length
     setTodayData({ completed: todayCompleted, total: totalHabits })
 
     // WEEKLY with offset
@@ -97,7 +97,7 @@ export default function Analytics() {
       date.setDate(startOfWeek.getDate() + i)
       const dateStr = date.toISOString().split('T')[0]
       const dayEntries = entriesMap.get(dateStr) || []
-      const completed = dayEntries.filter(e => e.status === 'completed').length
+      const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
       
       const hasEntries = entriesMap.has(dateStr)
@@ -122,7 +122,7 @@ export default function Analytics() {
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
       const dayEntries = entriesMap.get(dateStr) || []
-      const completed = dayEntries.filter(e => e.status === 'completed').length
+      const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
       let status = 'missed'
       if (completed === totalHabits) status = 'all-done'
@@ -145,7 +145,7 @@ export default function Analytics() {
     for (let i = 0; i < 90; i++) {
       const dateStr = checkDate.toISOString().split('T')[0]
       const dayEntries = entriesMap.get(dateStr) || []
-      const completed = dayEntries.filter(e => e.status === 'completed').length
+      const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
       if (completed === totalHabits) {
         currentStreak++
@@ -160,7 +160,7 @@ export default function Analytics() {
     const sortedDates = Array.from(entriesMap.keys()).sort()
     for (const date of sortedDates) {
       const dayEntries = entriesMap.get(date) || []
-      const completed = dayEntries.filter(e => e.status === 'completed').length
+      const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
       if (completed === totalHabits) {
         tempStreak++
@@ -171,13 +171,13 @@ export default function Analytics() {
     }
 
     let totalCompletions = 0
-    entries?.forEach(e => {
+    entries?.forEach((e: any) => {
       if (e.status === 'completed') totalCompletions++
     })
 
     const daysWithEntries = entriesMap.size
     const daysWithCompletions = Array.from(entriesMap.values())
-      .filter(dayEntries => dayEntries.some(e => e.status === 'completed'))
+      .filter((dayEntries: any[]) => dayEntries.some((e: any) => e.status === 'completed'))
       .length
     const consistency = daysWithEntries > 0 
       ? Math.round((daysWithCompletions / daysWithEntries) * 100)
@@ -199,7 +199,7 @@ export default function Analytics() {
     } else {
       // First check if today is completed
       const todayEntry = entriesMap.get(today)
-      const todayCompletedCount = todayEntry?.filter(e => e.status === 'completed').length || 0
+      const todayCompletedCount = todayEntry?.filter((e: any) => e.status === 'completed').length || 0
       
       if (todayCompletedCount === totalHabits && totalHabits > 0) {
         // Perfect score today!
@@ -251,7 +251,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* MOTIVATIONAL QUOTE - Fixed */}
+        {/* MOTIVATIONAL QUOTE */}
         <div className="bg-gradient-to-r from-indigo-50/80 to-purple-50/80 dark:from-indigo-900/20 dark:to-purple-900/20 border border-indigo-200/50 dark:border-indigo-800/30 rounded-2xl p-4 mb-4 text-center">
           <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">{motivation}</p>
         </div>
@@ -324,7 +324,7 @@ export default function Analytics() {
               
               if (day.isFuture) {
                 barColor = 'bg-gray-100 dark:bg-gray-800'
-                barLabel = '3">🗓️'
+                barLabel = '🗓️'
                 labelColor = 'text-gray-300 dark:text-gray-600'
               } else if (day.hasEntries) {
                 if (day.percentage === 100) {
@@ -395,7 +395,7 @@ export default function Analytics() {
               <span className="w-3 h-3 bg-gray-200 dark:bg-gray-700 rounded-full"></span> No Data
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-3 h-3 bg-gray-100 dark:bg-gray-800 rounded-full"></span> 3">🗓️ Future
+              <span className="w-3 h-3 bg-gray-100 dark:bg-gray-800 rounded-full"></span> 🗓️ Future
             </span>
           </div>
         </div>
@@ -442,7 +442,7 @@ export default function Analytics() {
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 text-center">
             <div className="text-2xl font-bold text-indigo-500 dark:text-indigo-400">{weeklyData.filter(d => d.percentage === 100 && d.hasEntries).length}/7</div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">📅 Perfect Days</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">🗓️ Perfect Days</div>
           </div>
         </div>
 
