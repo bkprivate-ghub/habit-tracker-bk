@@ -7,6 +7,7 @@ import { calculateStreak } from './lib/streak'
 
 export default function Home() {
   const [habits, setHabits] = useState<any[]>([])
+  const [dailyEntries, setDailyEntries] = useState<any[]>([])
   const [streaks, setStreaks] = useState<Record<string, { current: number, longest: number }>>({})
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
@@ -15,6 +16,7 @@ export default function Home() {
   const [greeting, setGreeting] = useState('')
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
+  const today = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
     const hour = new Date().getHours()
@@ -39,9 +41,19 @@ export default function Home() {
       console.error('Error loading habits:', error)
     } else if (data) {
       setHabits(data)
+      await loadDailyEntries(data)
       await loadStreaks(data)
     }
     setLoading(false)
+  }
+
+  const loadDailyEntries = async (habitsData: any[]) => {
+    const { data } = await supabase
+      .from('daily_entries')
+      .select('*')
+      .eq('date', today)
+    
+    if (data) setDailyEntries(data)
   }
 
   const loadStreaks = async (habitsData: any[]) => {
@@ -65,27 +77,38 @@ export default function Home() {
   }
 
   const toggleHabit = async (id: string, currentDone: boolean) => {
-    const today = new Date().toISOString().split('T')[0]
+    const newStatus = !currentDone ? 'completed' : 'pending'
     
+    // Update daily entry
     const { error } = await supabase
-      .from('habits')
-      .update({ done: !currentDone })
-      .eq('id', id)
+      .from('daily_entries')
+      .upsert({
+        habit_id: id,
+        date: today,
+        status: newStatus,
+        completed_at: !currentDone ? new Date().toISOString() : null
+      })
     
     if (!error) {
-      const status = !currentDone ? 'completed' : 'pending'
-      await supabase
-        .from('daily_entries')
-        .upsert({
-          habit_id: id,
-          date: today,
-          status: status,
-          completed_at: !currentDone ? new Date().toISOString() : null
-        })
+      // Update local state
+      setDailyEntries(prev => {
+        const existing = prev.find(e => e.habit_id === id && e.date === today)
+        if (existing) {
+          return prev.map(e => 
+            e.habit_id === id && e.date === today 
+              ? { ...e, status: newStatus }
+              : e
+          )
+        } else {
+          return [...prev, { habit_id: id, date: today, status: newStatus }]
+        }
+      })
       
-      setHabits(habits.map(h => 
-        h.id === id ? { ...h, done: !h.done } : h
-      ))
+      // Also update the habits table for quick reference
+      await supabase
+        .from('habits')
+        .update({ done: !currentDone })
+        .eq('id', id)
       
       await loadStreaks(habits)
     }
@@ -108,11 +131,16 @@ export default function Home() {
     }
   }
 
+  const getHabitStatus = (habitId: string) => {
+    const entry = dailyEntries.find(e => e.habit_id === habitId && e.date === today)
+    return entry?.status === 'completed'
+  }
+
   const total = habits.length
-  const completed = habits.filter(h => h.done).length
+  const completed = habits.filter(h => getHabitStatus(h.id)).length
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
 
-  const today = new Date().toLocaleDateString('en-US', { 
+  const dateDisplay = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
     month: 'long', 
     day: 'numeric' 
@@ -138,7 +166,7 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-gray-800">
               {greeting || 'Hello'}, Bharath K 👋
             </h1>
-            <p className="text-gray-500 text-sm">{today}</p>
+            <p className="text-gray-500 text-sm">{dateDisplay}</p>
           </div>
           <Link href="/settings" className="text-2xl p-2 hover:bg-gray-200 rounded-full transition">
             ⚙️
@@ -177,7 +205,7 @@ export default function Home() {
           </div>
           <div className="bg-white p-3 rounded-xl shadow text-center">
             <div className="text-2xl font-bold text-yellow-500">
-              {habits.filter(h => !h.done).length}
+              {habits.filter(h => !getHabitStatus(h.id)).length}
             </div>
             <div className="text-xs text-gray-500">Remaining</div>
           </div>
@@ -192,17 +220,18 @@ export default function Home() {
         <h2 className="text-sm font-semibold text-gray-600 mb-3">Today's Habits</h2>
         
         {habits.map((habit) => {
+          const isDone = getHabitStatus(habit.id)
           const streak = streaks[habit.id] || { current: 0, longest: 0 }
           return (
             <div 
               key={habit.id}
-              onClick={() => toggleHabit(habit.id, habit.done)}
+              onClick={() => toggleHabit(habit.id, isDone)}
               className={`bg-white p-4 rounded-xl shadow mb-2 border-l-4 transition-all cursor-pointer
-                ${habit.done ? 'border-green-500 bg-green-50/50' : 'border-blue-500'}`}
+                ${isDone ? 'border-green-500 bg-green-50/50' : 'border-blue-500'}`}
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <span className={`${habit.done ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                  <span className={`${isDone ? 'line-through text-gray-400' : 'text-gray-700'}`}>
                     {habit.name}
                   </span>
                   {streak.current > 0 && (
@@ -210,13 +239,8 @@ export default function Home() {
                       🔥 {streak.current}d
                     </span>
                   )}
-                  {streak.longest > 0 && streak.current === 0 && (
-                    <span className="ml-2 text-xs text-gray-400 font-medium">
-                      ⭐ Best: {streak.longest}d
-                    </span>
-                  )}
                 </div>
-                <span className="text-xl">{habit.done ? '✅' : '◻️'}</span>
+                <span className="text-xl">{isDone ? '✅' : '◻️'}</span>
               </div>
             </div>
           )
