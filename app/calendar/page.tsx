@@ -64,9 +64,6 @@ export default function Calendar() {
     
     const today = new Date().toISOString().split('T')[0]
     
-    // Get today's date for checking habit creation
-    const todayDate = new Date()
-    
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d)
       const dateStr = date.toISOString().split('T')[0]
@@ -77,14 +74,12 @@ export default function Calendar() {
       let habitsThatExisted = 0
       for (const habit of habitsData) {
         const habitCreatedAt = new Date(habit.created_at)
-        // Compare just the date part
         const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
         if (habitCreatedDate <= dateStr) {
           habitsThatExisted++
         }
       }
       
-      // Calculate total habits for this day (only those that existed)
       const totalForDay = habitsThatExisted > 0 ? habitsThatExisted : habitsData.length
       
       let status = 'future'
@@ -184,7 +179,6 @@ export default function Calendar() {
 
         {/* Calendar Grid */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
-          {/* Day Names */}
           <div className="grid grid-cols-7 gap-1 mb-2">
             {dayNames.map((day, i) => (
               <div key={i} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1">
@@ -193,7 +187,6 @@ export default function Calendar() {
             ))}
           </div>
 
-          {/* Days */}
           <div className="grid grid-cols-7 gap-1">
             {calendarData.map((day, i) => {
               if (day.status === 'empty') {
@@ -250,7 +243,6 @@ export default function Calendar() {
           </div>
         </div>
 
-        {/* Legend */}
         <div className="flex justify-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
           <span>🟢 All Done</span>
           <span>🟡 Partial</span>
@@ -258,7 +250,6 @@ export default function Calendar() {
           <span>○ Future</span>
         </div>
 
-        {/* Day Details */}
         {selectedDay && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 animate-slide-up">
             <div className="flex justify-between items-center mb-3">
@@ -301,7 +292,6 @@ export default function Calendar() {
           </div>
         )}
 
-        {/* Quick Stats */}
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
             <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
