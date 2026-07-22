@@ -54,34 +54,50 @@ export default function HabitDetail() {
       
       if (entriesData) {
         setEntries(entriesData)
-        calculateStats(entriesData)
+        calculateStats(entriesData, habitData)
       }
     }
     
     setLoading(false)
   }
 
-  const calculateStats = (allEntries: any[]) => {
-    // Get date range for last 30 days
-    const today = new Date()
-    const thirtyDaysAgo = new Date(today)
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
+  const calculateStats = (allEntries: any[], habitData: any) => {
+    // Get habit creation date
+    const createdDate = new Date(habitData.created_at)
+    const createdDateStr = createdDate.toISOString().split('T')[0]
+    const today = new Date().toISOString().split('T')[0]
     
-    // Count completions in last 30 days
-    const recentEntries = allEntries.filter(e => e.date >= thirtyDaysAgoStr)
-    const completed = recentEntries.filter(e => e.status === 'completed').length
+    // Calculate total days since creation (excluding future days)
+    let totalDaysSinceCreation = 0
+    let currentDate = new Date(createdDate)
+    const todayDate = new Date()
     
-    // Consistency = completed days / 30 days (NOT just tracked days)
-    const totalDays = 30
-    const consistency = Math.round((completed / totalDays) * 100)
+    while (currentDate <= todayDate) {
+      totalDaysSinceCreation++
+      currentDate.setDate(currentDate.getDate() + 1)
+    }
+    
+    // Count completions
+    const completedEntries = allEntries.filter(e => e.status === 'completed')
+    const completed = completedEntries.length
+    
+    // Consistency = completed days / total days since creation
+    const consistency = totalDaysSinceCreation > 0 
+      ? Math.round((completed / totalDaysSinceCreation) * 100)
+      : 0
     
     // Current streak
     let currentStreak = 0
     let checkDate = new Date()
     
-    for (let i = 0; i < 60; i++) {
+    // Check from today backwards
+    for (let i = 0; i < totalDaysSinceCreation + 10; i++) {
       const dateStr = checkDate.toISOString().split('T')[0]
+      // Don't count future days
+      if (dateStr > today) {
+        checkDate.setDate(checkDate.getDate() - 1)
+        continue
+      }
       const entry = allEntries.find(e => e.date === dateStr && e.status === 'completed')
       if (entry) {
         currentStreak++
@@ -100,11 +116,11 @@ export default function HabitDetail() {
     
     let prevDate: Date | null = null
     for (const entry of sortedEntries) {
-      const currentDate = new Date(entry.date)
+      const currentDateObj = new Date(entry.date)
       if (prevDate === null) {
         tempBest = 1
       } else {
-        const diffDays = Math.floor((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24))
+        const diffDays = Math.floor((currentDateObj.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24))
         if (diffDays === 1) {
           tempBest++
         } else {
@@ -112,7 +128,7 @@ export default function HabitDetail() {
           tempBest = 1
         }
       }
-      prevDate = currentDate
+      prevDate = currentDateObj
     }
     bestStreak = Math.max(bestStreak, tempBest)
     
@@ -120,8 +136,8 @@ export default function HabitDetail() {
       consistency,
       currentStreak,
       bestStreak,
-      totalCompletions: allEntries.filter(e => e.status === 'completed').length,
-      totalDays: allEntries.length,
+      totalCompletions: completed,
+      totalDays: totalDaysSinceCreation,
     })
   }
 
@@ -137,7 +153,6 @@ export default function HabitDetail() {
       startDate = new Date(today)
       startDate.setDate(startDate.getDate() - 30)
     } else {
-      // 'all' - show all entries
       setFilteredEntries(entries)
       return
     }
@@ -169,18 +184,29 @@ export default function HabitDetail() {
   const calculateFilteredConsistency = () => {
     if (filteredEntries.length === 0) return 0
     
-    // Get the date range for the filter period
-    const today = new Date()
+    const today = new Date().toISOString().split('T')[0]
     let totalDays = 0
+    let startDate: Date
     
     if (filter === 'week') {
+      startDate = new Date()
+      startDate.setDate(startDate.getDate() - 7)
       totalDays = 7
     } else if (filter === 'month') {
+      startDate = new Date()
+      startDate.setDate(startDate.getDate() - 30)
       totalDays = 30
     } else {
-      // For 'all', use total unique dates with entries
-      const uniqueDates = new Set(entries.map(e => e.date))
-      totalDays = uniqueDates.size
+      // For 'all', use total days since creation
+      const createdDate = new Date(habit?.created_at)
+      const todayDate = new Date()
+      let count = 0
+      let current = new Date(createdDate)
+      while (current <= todayDate) {
+        count++
+        current.setDate(current.getDate() + 1)
+      }
+      totalDays = count
     }
     
     const completed = filteredEntries.filter(e => e.status === 'completed').length
@@ -189,10 +215,21 @@ export default function HabitDetail() {
 
   // Get missed days for the filtered period
   const getMissedDays = () => {
-    if (filter === 'all') return 0
+    if (filter === 'all') {
+      // For 'all', calculate total days since creation minus completions
+      const createdDate = new Date(habit?.created_at)
+      const todayDate = new Date()
+      let total = 0
+      let current = new Date(createdDate)
+      while (current <= todayDate) {
+        total++
+        current.setDate(current.getDate() + 1)
+      }
+      return total - stats.totalCompletions
+    }
     
     const today = new Date()
-    let totalDays = filter === 'week' ? 7 : 30
+    const totalDays = filter === 'week' ? 7 : 30
     const startDate = new Date(today)
     startDate.setDate(startDate.getDate() - totalDays)
     const startStr = startDate.toISOString().split('T')[0]
@@ -206,7 +243,8 @@ export default function HabitDetail() {
       const date = new Date(startDate)
       date.setDate(date.getDate() + i)
       const dateStr = date.toISOString().split('T')[0]
-      if (!completedDates.has(dateStr)) {
+      // Only count days up to today (not future)
+      if (dateStr <= new Date().toISOString().split('T')[0] && !completedDates.has(dateStr)) {
         missed++
       }
     }
@@ -214,7 +252,6 @@ export default function HabitDetail() {
   }
 
   const filteredConsistency = calculateFilteredConsistency()
-  const missedDays = getMissedDays()
 
   if (loading) {
     return (
@@ -264,11 +301,11 @@ export default function HabitDetail() {
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 text-center">
             <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-              {filteredConsistency}%
+              {stats.consistency}%
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Consistency</div>
             <div className="text-[10px] text-gray-400 dark:text-gray-500">
-              {filter === 'week' ? 'Last 7 days' : filter === 'month' ? 'Last 30 days' : 'All time'}
+              {stats.totalCompletions}/{stats.totalDays} days
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 text-center">
@@ -308,24 +345,21 @@ export default function HabitDetail() {
           ))}
         </div>
 
-        {/* Consistency Progress Bar */}
+        {/* Consistency Progress Bar - Using Stats.consistency (overall) */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
           <div className="flex justify-between text-sm mb-1">
-            <span className="text-gray-500 dark:text-gray-400">Consistency</span>
-            <span className="font-bold text-indigo-600 dark:text-indigo-400">{filteredConsistency}%</span>
+            <span className="text-gray-500 dark:text-gray-400">Overall Consistency</span>
+            <span className="font-bold text-indigo-600 dark:text-indigo-400">{stats.consistency}%</span>
           </div>
           <div className="w-full h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
             <div 
               className="h-full bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full transition-all duration-500"
-              style={{ width: `${filteredConsistency}%` }}
+              style={{ width: `${stats.consistency}%` }}
             ></div>
           </div>
           <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-1">
             <span>0%</span>
-            <span>
-              {filter === 'week' ? '7 days' : filter === 'month' ? '30 days' : 'All time'} · 
-              {missedDays > 0 ? ` ${missedDays} days missed` : ' No misses! 🎉'}
-            </span>
+            <span>{stats.totalCompletions} of {stats.totalDays} days completed</span>
             <span>100%</span>
           </div>
         </div>
