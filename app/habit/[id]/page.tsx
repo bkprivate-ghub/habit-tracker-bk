@@ -37,7 +37,6 @@ export default function HabitDetail() {
   const loadHabitData = async () => {
     setLoading(true)
     
-    // Get habit details
     const { data: habitData } = await supabase
       .from('habits')
       .select('*')
@@ -47,7 +46,6 @@ export default function HabitDetail() {
     if (habitData) {
       setHabit(habitData)
       
-      // Get all entries for this habit
       const { data: entriesData } = await supabase
         .from('daily_entries')
         .select('*')
@@ -64,50 +62,34 @@ export default function HabitDetail() {
   }
 
   const calculateStats = (allEntries: any[]) => {
-    // Calculate total days (last 30 days)
-    const thirtyDaysAgo = new Date()
+    // Get date range for last 30 days
+    const today = new Date()
+    const thirtyDaysAgo = new Date(today)
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
     
+    // Count completions in last 30 days
     const recentEntries = allEntries.filter(e => e.date >= thirtyDaysAgoStr)
     const completed = recentEntries.filter(e => e.status === 'completed').length
-    const totalDays = 30
     
-    // Consistency %
+    // Consistency = completed days / 30 days (NOT just tracked days)
+    const totalDays = 30
     const consistency = Math.round((completed / totalDays) * 100)
     
     // Current streak
     let currentStreak = 0
     let checkDate = new Date()
-    const todayStr = checkDate.toISOString().split('T')[0]
     
-    // Check if today is completed
-    const todayEntry = allEntries.find(e => e.date === todayStr && e.status === 'completed')
-    if (!todayEntry) {
-      // Check yesterday
-      const yesterday = new Date()
-      yesterday.setDate(yesterday.getDate() - 1)
-      const yesterdayStr = yesterday.toISOString().split('T')[0]
-      const yesterdayEntry = allEntries.find(e => e.date === yesterdayStr && e.status === 'completed')
-      if (!yesterdayEntry) {
-        currentStreak = 0
-      }
-    }
-    
-    // Count streak
-    let tempStreak = 0
-    let checkDateCopy = new Date()
     for (let i = 0; i < 60; i++) {
-      const dateStr = checkDateCopy.toISOString().split('T')[0]
+      const dateStr = checkDate.toISOString().split('T')[0]
       const entry = allEntries.find(e => e.date === dateStr && e.status === 'completed')
       if (entry) {
-        tempStreak++
+        currentStreak++
       } else {
         break
       }
-      checkDateCopy.setDate(checkDateCopy.getDate() - 1)
+      checkDate.setDate(checkDate.getDate() - 1)
     }
-    currentStreak = tempStreak
     
     // Best streak
     let bestStreak = 0
@@ -146,19 +128,22 @@ export default function HabitDetail() {
   const applyFilter = () => {
     const today = new Date()
     let filtered = [...entries]
+    let startDate: Date
     
     if (filter === 'week') {
-      const weekAgo = new Date(today)
-      weekAgo.setDate(weekAgo.getDate() - 7)
-      const weekAgoStr = weekAgo.toISOString().split('T')[0]
-      filtered = entries.filter(e => e.date >= weekAgoStr)
+      startDate = new Date(today)
+      startDate.setDate(startDate.getDate() - 7)
     } else if (filter === 'month') {
-      const monthAgo = new Date(today)
-      monthAgo.setDate(monthAgo.getDate() - 30)
-      const monthAgoStr = monthAgo.toISOString().split('T')[0]
-      filtered = entries.filter(e => e.date >= monthAgoStr)
+      startDate = new Date(today)
+      startDate.setDate(startDate.getDate() - 30)
+    } else {
+      // 'all' - show all entries
+      setFilteredEntries(entries)
+      return
     }
     
+    const startStr = startDate.toISOString().split('T')[0]
+    filtered = entries.filter(e => e.date >= startStr)
     setFilteredEntries(filtered)
   }
 
@@ -179,6 +164,57 @@ export default function HabitDetail() {
       default: return '⬜'
     }
   }
+
+  // Calculate consistency for filtered data
+  const calculateFilteredConsistency = () => {
+    if (filteredEntries.length === 0) return 0
+    
+    // Get the date range for the filter period
+    const today = new Date()
+    let totalDays = 0
+    
+    if (filter === 'week') {
+      totalDays = 7
+    } else if (filter === 'month') {
+      totalDays = 30
+    } else {
+      // For 'all', use total unique dates with entries
+      const uniqueDates = new Set(entries.map(e => e.date))
+      totalDays = uniqueDates.size
+    }
+    
+    const completed = filteredEntries.filter(e => e.status === 'completed').length
+    return Math.round((completed / totalDays) * 100)
+  }
+
+  // Get missed days for the filtered period
+  const getMissedDays = () => {
+    if (filter === 'all') return 0
+    
+    const today = new Date()
+    let totalDays = filter === 'week' ? 7 : 30
+    const startDate = new Date(today)
+    startDate.setDate(startDate.getDate() - totalDays)
+    const startStr = startDate.toISOString().split('T')[0]
+    
+    const completedDates = new Set(
+      filteredEntries.filter(e => e.status === 'completed').map(e => e.date)
+    )
+    
+    let missed = 0
+    for (let i = 0; i < totalDays; i++) {
+      const date = new Date(startDate)
+      date.setDate(date.getDate() + i)
+      const dateStr = date.toISOString().split('T')[0]
+      if (!completedDates.has(dateStr)) {
+        missed++
+      }
+    }
+    return missed
+  }
+
+  const filteredConsistency = calculateFilteredConsistency()
+  const missedDays = getMissedDays()
 
   if (loading) {
     return (
@@ -204,11 +240,6 @@ export default function HabitDetail() {
       </div>
     )
   }
-
-  // Calculate consistency for filtered data
-  const filteredCompleted = filteredEntries.filter(e => e.status === 'completed').length
-  const filteredTotal = filteredEntries.length || 1
-  const filteredConsistency = Math.round((filteredCompleted / filteredTotal) * 100)
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20">
@@ -237,7 +268,7 @@ export default function HabitDetail() {
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Consistency</div>
             <div className="text-[10px] text-gray-400 dark:text-gray-500">
-              {filteredCompleted}/{filteredTotal} days
+              {filter === 'week' ? 'Last 7 days' : filter === 'month' ? 'Last 30 days' : 'All time'}
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 text-center">
@@ -272,7 +303,7 @@ export default function HabitDetail() {
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
             >
-              {f === 'week' ? '📅 Week' : f === 'month' ? '📆 Month' : '📊 All'}
+              {f === 'week' ? '🗓️ Week' : f === 'month' ? '🗓️ Month' : '📊 All'}
             </button>
           ))}
         </div>
@@ -291,7 +322,10 @@ export default function HabitDetail() {
           </div>
           <div className="flex justify-between text-[10px] text-gray-400 dark:text-gray-500 mt-1">
             <span>0%</span>
-            <span>{filteredCompleted} days completed</span>
+            <span>
+              {filter === 'week' ? '7 days' : filter === 'month' ? '30 days' : 'All time'} · 
+              {missedDays > 0 ? ` ${missedDays} days missed` : ' No misses! 🎉'}
+            </span>
             <span>100%</span>
           </div>
         </div>
