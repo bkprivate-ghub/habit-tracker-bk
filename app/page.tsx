@@ -448,7 +448,8 @@ export default function Home() {
             return (
               <div 
                 key={habit.id}
-                className={`group relative p-4 rounded-2xl transition-all duration-300 border
+                onClick={() => !isToggling && toggleHabit(habit.id)}
+                className={`group relative p-4 rounded-2xl transition-all duration-300 cursor-pointer border
                   ${isDone 
                     ? 'bg-emerald-50/80 dark:bg-emerald-900/20 border-emerald-200/50 dark:border-emerald-800/30' 
                     : 'bg-white dark:bg-gray-800 border-gray-200/50 dark:border-gray-700/50 hover:shadow-md hover:scale-[1.01]'
@@ -456,12 +457,7 @@ export default function Home() {
                   ${isToggling ? 'opacity-50' : 'opacity-100'}`}
               >
                 <div className="flex items-center justify-between">
-                  {/* Clickable habit name - navigates to detail page */}
-                  <Link 
-                    href={`/habit/${habit.id}`}
-                    className="flex items-center gap-3 flex-1 cursor-pointer"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="flex items-center gap-3">
                     <div>
                       <span className={`font-medium ${isDone ? 'line-through text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-200'}`}>
                         {habit.name}
@@ -477,17 +473,8 @@ export default function Home() {
                         </span>
                       )}
                     </div>
-                  </Link>
-                  
-                  {/* Checkbox toggles habit */}
-                  <div 
-                    className="flex items-center gap-2 cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      e.preventDefault()
-                      if (!isToggling) toggleHabit(habit.id)
-                    }}
-                  >
+                  </div>
+                  <div className="flex items-center gap-2">
                     {isToggling ? (
                       <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
                     ) : (
