@@ -70,7 +70,7 @@ export default function Analytics() {
     const todayCompleted = todayEntries.filter((e: any) => e.status === 'completed').length
     setTodayData({ completed: todayCompleted, total: totalHabits })
 
-    // WEEKLY with offset
+    // WEEKLY with offset - FIXED to only count habits that existed
     const todayDate = new Date()
     const currentDay = todayDate.getDay()
     const startOfWeek = new Date(todayDate)
@@ -103,14 +103,26 @@ export default function Analytics() {
       const hasEntries = entriesMap.has(dateStr)
       const isFuture = date > new Date()
       
+      // Calculate how many habits existed on this date
+      let habitsThatExisted = 0
+      for (const habit of habits) {
+        const habitCreatedAt = new Date(habit.created_at)
+        const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
+        if (habitCreatedDate <= dateStr) {
+          habitsThatExisted++
+        }
+      }
+      
+      const totalForDay = habitsThatExisted > 0 ? habitsThatExisted : habits.length
+      
       weekData.push({
         day: dayName,
         date: dateStr,
         completed,
-        total: totalHabits,
+        total: totalForDay,
         hasEntries,
         isFuture,
-        percentage: totalHabits > 0 ? Math.round((completed / totalHabits) * 100) : 0,
+        percentage: totalForDay > 0 ? Math.round((completed / totalForDay) * 100) : 0,
       })
     }
     setWeeklyData(weekData)
@@ -124,7 +136,6 @@ export default function Analytics() {
       const dayEntries = entriesMap.get(dateStr) || []
       const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
-      // Calculate how many habits existed on this date
       let habitsThatExisted = 0
       for (const habit of habits) {
         const habitCreatedAt = new Date(habit.created_at)
@@ -296,7 +307,7 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* WEEKLY BAR CHART */}
+        {/* WEEKLY BAR CHART - FIXED */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400">📈 Weekly Progress</h2>
@@ -332,7 +343,7 @@ export default function Analytics() {
                 barLabel = '🗓️'
                 labelColor = 'text-gray-300 dark:text-gray-600'
               } else if (day.hasEntries) {
-                if (day.percentage === 100) {
+                if (day.percentage === 100 && day.total > 0) {
                   barColor = 'bg-emerald-500 dark:bg-emerald-400'
                   labelColor = 'text-emerald-600 dark:text-emerald-400'
                   barLabel = `✅ ${day.completed}/${day.total}`
@@ -362,7 +373,7 @@ export default function Analytics() {
                         opacity: day.hasEntries || day.isFuture ? 1 : 0.3
                       }}
                     >
-                      {day.hasEntries && barHeight > 30 && (
+                      {day.hasEntries && barHeight > 30 && day.total > 0 && (
                         <div className="absolute -top-5 w-full text-center text-[11px] font-bold text-gray-600 dark:text-gray-300">
                           {day.percentage}%
                         </div>
@@ -462,7 +473,9 @@ export default function Analytics() {
             <div className="text-xs text-gray-500 dark:text-gray-400">📊 Consistency</div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 text-center">
-            <div className="text-2xl font-bold text-indigo-500 dark:text-indigo-400">{weeklyData.filter(d => d.percentage === 100 && d.hasEntries).length}/7</div>
+            <div className="text-2xl font-bold text-indigo-500 dark:text-indigo-400">
+              {weeklyData.filter((d: any) => d.percentage === 100 && d.hasEntries && d.total > 0).length}/7
+            </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">🗓️ Perfect Days</div>
           </div>
         </div>
