@@ -63,19 +63,37 @@ export default function Calendar() {
     }
     
     const today = new Date().toISOString().split('T')[0]
+    
+    // Get today's date for checking habit creation
+    const todayDate = new Date()
+    
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d)
       const dateStr = date.toISOString().split('T')[0]
       const dayEntries = map.get(dateStr) || []
       const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
+      // Calculate how many habits existed on this date
+      let habitsThatExisted = 0
+      for (const habit of habitsData) {
+        const habitCreatedAt = new Date(habit.created_at)
+        // Compare just the date part
+        const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
+        if (habitCreatedDate <= dateStr) {
+          habitsThatExisted++
+        }
+      }
+      
+      // Calculate total habits for this day (only those that existed)
+      const totalForDay = habitsThatExisted > 0 ? habitsThatExisted : habitsData.length
+      
       let status = 'future'
       if (dateStr < today) {
-        if (completed === habitsData.length) status = 'all-done'
+        if (completed === totalForDay && totalForDay > 0) status = 'all-done'
         else if (completed > 0) status = 'partial'
         else status = 'missed'
       } else if (dateStr === today) {
-        if (completed === habitsData.length) status = 'all-done'
+        if (completed === totalForDay && totalForDay > 0) status = 'all-done'
         else if (completed > 0) status = 'partial'
         else status = 'pending'
       }
@@ -85,7 +103,7 @@ export default function Calendar() {
         date: dateStr,
         status,
         completed,
-        total: habitsData.length,
+        total: totalForDay,
         entries: dayEntries,
       })
     }
@@ -221,7 +239,7 @@ export default function Calendar() {
                   <span className="text-xs mt-0.5">
                     {getStatusEmoji(day.status)}
                   </span>
-                  {day.status !== 'future' && day.status !== 'empty' && day.status !== 'pending' && (
+                  {day.status !== 'future' && day.status !== 'empty' && day.status !== 'pending' && day.total > 0 && (
                     <span className="text-[8px] text-gray-400 dark:text-gray-500 mt-0.5">
                       {day.completed}/{day.total}
                     </span>
