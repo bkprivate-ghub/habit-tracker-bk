@@ -77,7 +77,7 @@ export default function Settings() {
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Manage Habits</h2>
           <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Delete habits you no longer track</p>
           
-          {habits.map((habit) => (
+          {habits.map((habit: any) => (
             <div key={habit.id} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
               <span className="text-gray-700 dark:text-gray-300">{habit.name}</span>
               <button
@@ -100,7 +100,7 @@ export default function Settings() {
             </div>
             <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 text-center">
               <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                {habits.filter(h => h.done).length}
+                {habits.filter((h: any) => h.done).length}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400">Completed Today</div>
             </div>
