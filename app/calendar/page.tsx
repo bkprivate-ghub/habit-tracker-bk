@@ -45,7 +45,7 @@ export default function Calendar() {
       .lte('date', endStr)
 
     const map = new Map()
-    entriesData?.forEach(e => {
+    entriesData?.forEach((e: any) => {
       if (!map.has(e.date)) {
         map.set(e.date, [])
       }
@@ -67,7 +67,7 @@ export default function Calendar() {
       const date = new Date(year, month, d)
       const dateStr = date.toISOString().split('T')[0]
       const dayEntries = map.get(dateStr) || []
-      const completed = dayEntries.filter(e => e.status === 'completed').length
+      const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
       let status = 'future'
       if (dateStr < today) {
@@ -125,7 +125,7 @@ export default function Calendar() {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4 animate-pulse text-gray-600 dark:text-gray-300">◆</div>
+          <div className="text-4xl mb-4 animate-pulse text-gray-600 dark:text-gray-300">🗓️</div>
           <p className="text-gray-500 dark:text-gray-400 font-light">Loading calendar...</p>
         </div>
       </div>
@@ -263,7 +263,7 @@ export default function Calendar() {
               <p className="text-sm text-gray-500 dark:text-gray-400">No habits tracked this day</p>
             ) : (
               <div className="space-y-1">
-                {selectedDayDetails.map((entry, i) => {
+                {selectedDayDetails.map((entry: any, i: number) => {
                   const habit = habits.find(h => h.id === entry.habit_id)
                   return (
                     <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
@@ -287,19 +287,19 @@ export default function Calendar() {
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
             <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-              {calendarData.filter(d => d.status === 'all-done').length}
+              {calendarData.filter((d: any) => d.status === 'all-done').length}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Perfect Days</div>
           </div>
           <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
             <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
-              {calendarData.filter(d => d.status === 'partial').length}
+              {calendarData.filter((d: any) => d.status === 'partial').length}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Partial Days</div>
           </div>
           <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
             <div className="text-lg font-bold text-rose-500 dark:text-rose-400">
-              {calendarData.filter(d => d.status === 'missed').length}
+              {calendarData.filter((d: any) => d.status === 'missed').length}
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Missed Days</div>
           </div>
