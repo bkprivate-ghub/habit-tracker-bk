@@ -60,15 +60,16 @@ export default function Home() {
     setLoading(false)
   }
 
-  // Function to sort habits by custom order
+  // Function to sort habits by custom order - FIXED REGEX
   const sortHabitsByOrder = (habitsData: any[]) => {
     return [...habitsData].sort((a, b) => {
       // Extract the name without emoji for comparison
       const getNameWithoutEmoji = (name: string) => {
-        // Remove emoji (first character if it's an emoji)
+        // Check if first character is an emoji
         const firstChar = name.charAt(0)
-        // Check if it's an emoji (simple check)
-        if (/[\u{1F000}-\u{1FFFF}]/u.test(firstChar)) {
+        // Check if it's an emoji (any non-letter/non-number character)
+        const isEmoji = !/[a-zA-Z0-9\s]/.test(firstChar)
+        if (isEmoji) {
           return name.substring(2).trim() // Remove emoji + space
         }
         return name.trim()
@@ -98,19 +99,19 @@ export default function Home() {
     
     for (const habit of habitsData) {
       const habitEntries = entries
-        .filter(e => e.habit_id === habit.id && e.status === 'completed')
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+        .filter((e: any) => e.habit_id === habit.id && e.status === 'completed')
+        .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
       
       let streak = 0
       let checkDate = new Date()
       const todayStr = checkDate.toISOString().split('T')[0]
-      const todayEntry = habitEntries.find(e => e.date === todayStr)
+      const todayEntry = habitEntries.find((e: any) => e.date === todayStr)
       
       if (!todayEntry) {
         const yesterday = new Date()
         yesterday.setDate(yesterday.getDate() - 1)
         const yesterdayStr = yesterday.toISOString().split('T')[0]
-        const yesterdayEntry = habitEntries.find(e => e.date === yesterdayStr)
+        const yesterdayEntry = habitEntries.find((e: any) => e.date === yesterdayStr)
         
         if (!yesterdayEntry) {
           streakMap[habit.id] = 0
@@ -121,7 +122,7 @@ export default function Home() {
       
       for (let i = 0; i < 30; i++) {
         const dateStr = checkDate.toISOString().split('T')[0]
-        const entry = habitEntries.find(e => e.date === dateStr)
+        const entry = habitEntries.find((e: any) => e.date === dateStr)
         if (entry) {
           streak++
         } else {
@@ -139,12 +140,12 @@ export default function Home() {
   const toggleHabit = async (habitId: string) => {
     setTogglingId(habitId)
     
-    const existing = dailyEntries.find(e => e.habit_id === habitId && e.date === today)
+    const existing = dailyEntries.find((e: any) => e.habit_id === habitId && e.date === today)
     const isDone = existing?.status === 'completed'
     const newStatus = isDone ? 'pending' : 'completed'
     
     const updatedEntries = [...dailyEntries]
-    const existingIndex = updatedEntries.findIndex(e => e.habit_id === habitId && e.date === today)
+    const existingIndex = updatedEntries.findIndex((e: any) => e.habit_id === habitId && e.date === today)
     
     if (existingIndex >= 0) {
       updatedEntries[existingIndex] = { ...updatedEntries[existingIndex], status: newStatus }
@@ -155,18 +156,18 @@ export default function Home() {
     setDailyEntries(updatedEntries)
     
     const habitEntries = updatedEntries
-      .filter(e => e.habit_id === habitId && e.status === 'completed')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .filter((e: any) => e.habit_id === habitId && e.status === 'completed')
+      .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime())
     
     let streak = 0
     let checkDate = new Date()
     const todayStr = checkDate.toISOString().split('T')[0]
-    const todayEntry = habitEntries.find(e => e.date === todayStr)
+    const todayEntry = habitEntries.find((e: any) => e.date === todayStr)
     
     if (todayEntry) {
       for (let i = 0; i < 30; i++) {
         const dateStr = checkDate.toISOString().split('T')[0]
-        const entry = habitEntries.find(e => e.date === dateStr)
+        const entry = habitEntries.find((e: any) => e.date === dateStr)
         if (entry) {
           streak++
         } else {
@@ -176,7 +177,7 @@ export default function Home() {
       }
     }
     
-    setStreaks(prev => ({ ...prev, [habitId]: streak }))
+    setStreaks((prev: Record<string, number>) => ({ ...prev, [habitId]: streak }))
     
     try {
       await supabase
@@ -226,16 +227,16 @@ export default function Home() {
   }
 
   const getIsDone = (habitId: string) => {
-    const entry = dailyEntries.find(e => e.habit_id === habitId && e.date === today)
+    const entry = dailyEntries.find((e: any) => e.habit_id === habitId && e.date === today)
     return entry?.status === 'completed'
   }
 
   const total = habits.length
-  const completed = habits.filter(h => getIsDone(h.id)).length
+  const completed = habits.filter((h: any) => getIsDone(h.id)).length
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0
   
   const bestStreak = Math.max(...Object.values(streaks), 0)
-  const activeStreaks = Object.values(streaks).filter(s => s > 0).length
+  const activeStreaks = Object.values(streaks).filter((s: number) => s > 0).length
 
   const dateDisplay = new Date().toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -375,7 +376,7 @@ export default function Home() {
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
             { value: completed, label: 'Done', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
-            { value: habits.filter(h => !getIsDone(h.id)).length, label: 'Remaining', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
+            { value: habits.filter((h: any) => !getIsDone(h.id)).length, label: 'Remaining', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20' },
             { value: activeStreaks, label: 'Streaks', color: 'text-orange-600 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-900/20' },
           ].map((stat, i) => (
             <div key={i} className={`${stat.bg} p-3 rounded-2xl text-center border border-gray-200/30 dark:border-gray-700/30 transition-all hover:scale-105 duration-300`}>
@@ -403,7 +404,7 @@ export default function Home() {
         </div>
         
         <div className="space-y-2.5">
-          {habits.map((habit) => {
+          {habits.map((habit: any) => {
             const isDone = getIsDone(habit.id)
             const streak = streaks[habit.id] || 0
             const isToggling = togglingId === habit.id
