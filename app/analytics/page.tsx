@@ -115,7 +115,7 @@ export default function Analytics() {
     }
     setWeeklyData(weekData)
 
-    // MONTHLY
+    // MONTHLY - FIXED to only count habits that existed on each date
     const monthData = []
     for (let i = 29; i >= 0; i--) {
       const date = new Date()
@@ -124,8 +124,20 @@ export default function Analytics() {
       const dayEntries = entriesMap.get(dateStr) || []
       const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
+      // Calculate how many habits existed on this date
+      let habitsThatExisted = 0
+      for (const habit of habits) {
+        const habitCreatedAt = new Date(habit.created_at)
+        const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
+        if (habitCreatedDate <= dateStr) {
+          habitsThatExisted++
+        }
+      }
+      
+      const totalForDay = habitsThatExisted > 0 ? habitsThatExisted : habits.length
+      
       let status = 'missed'
-      if (completed === totalHabits) status = 'all-done'
+      if (completed === totalForDay && totalForDay > 0) status = 'all-done'
       else if (completed > 0) status = 'partial'
       
       monthData.push({
@@ -133,7 +145,7 @@ export default function Analytics() {
         day: date.getDate(),
         month: date.toLocaleDateString('en-US', { month: 'short' }),
         completed,
-        total: totalHabits,
+        total: totalForDay,
         status,
       })
     }
@@ -190,35 +202,28 @@ export default function Analytics() {
       consistency,
     })
 
-    // FIXED: Select quote based on current streak and consistency
+    // Select quote based on current streak and consistency
     let quote = null
     
-    // Check if there's any data
     if (daysWithEntries === 0) {
       quote = "🌟 Start tracking your habits to see progress!"
     } else {
-      // First check if today is completed
       const todayEntry = entriesMap.get(today)
       const todayCompletedCount = todayEntry?.filter((e: any) => e.status === 'completed').length || 0
       
       if (todayCompletedCount === totalHabits && totalHabits > 0) {
-        // Perfect score today!
         quote = "🌟 PERFECT SCORE! You're unstoppable! Keep this energy!"
       } else if (todayCompletedCount > 0) {
-        // Partial today
         quote = "⭐ You're making progress! Every step counts toward your goals!"
       } else if (stats.currentStreak > 0) {
-        // Good streak but not today
         quote = `🔥 ${stats.currentStreak} day streak! Keep the momentum going!`
       } else {
-        // Use consistency-based quote
         const found = motivationalQuotes.find(q => consistency >= q.min && consistency <= q.max)
         quote = found ? found.text : "🌟 Keep going, you're doing great!"
       }
     }
 
     setMotivation(quote)
-
     setLoading(false)
   }
 
@@ -400,21 +405,37 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* MONTHLY HEATMAP */}
+        {/* MONTHLY HEATMAP - FIXED */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">🗓️ Monthly Progress</h2>
           <div className="grid grid-cols-7 gap-1">
             {monthlyData.map((day, i) => {
-              const dotColor = day.status === 'all-done' ? 'bg-emerald-500 dark:bg-emerald-400' 
-                : day.status === 'partial' ? 'bg-amber-500 dark:bg-amber-400' : 'bg-gray-200 dark:bg-gray-700'
+              let dotColor = 'bg-gray-200 dark:bg-gray-700'
+              let textColor = 'text-gray-400 dark:text-gray-500'
+              
+              if (day.status === 'all-done') {
+                dotColor = 'bg-emerald-500 dark:bg-emerald-400'
+                textColor = 'text-white'
+              } else if (day.status === 'partial') {
+                dotColor = 'bg-amber-500 dark:bg-amber-400'
+                textColor = 'text-white'
+              } else if (day.status === 'missed') {
+                dotColor = 'bg-gray-200 dark:bg-gray-700'
+                textColor = 'text-gray-400 dark:text-gray-500'
+              }
               
               return (
                 <div key={i} className="flex flex-col items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${dotColor}`}>
-                    <span className={`text-[10px] font-medium ${day.status === 'missed' ? 'text-gray-400 dark:text-gray-500' : 'text-white'}`}>
+                    <span className={`text-[10px] font-medium ${textColor}`}>
                       {day.day}
                     </span>
                   </div>
+                  {day.total > 0 && day.status !== 'future' && (
+                    <span className="text-[6px] text-gray-400 dark:text-gray-500 mt-0.5">
+                      {day.completed}/{day.total}
+                    </span>
+                  )}
                 </div>
               )
             })}
