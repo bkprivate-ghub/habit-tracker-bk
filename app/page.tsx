@@ -18,6 +18,7 @@ export default function Home() {
   const [togglingId, setTogglingId] = useState<string | null>(null)
   const [todayStreak, setTodayStreak] = useState(0)
   const [motivationMessage, setMotivationMessage] = useState('')
+  const [currentProgress, setCurrentProgress] = useState(0)
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
   const today = new Date().toISOString().split('T')[0]
@@ -40,7 +41,6 @@ export default function Home() {
     setGreeting(g)
     loadAllData()
     
-    // Splash screen
     const timer = setTimeout(() => {
       setShowSplash(false)
     }, 1800)
@@ -176,13 +176,18 @@ export default function Home() {
     setStreaks(streakMap)
     setBestEverStreak(maxStreakOverall)
     
-    // Calculate TODAY'S STREAK (counts if at least 1 habit done today)
+    // Calculate TODAY'S STREAK and MOTIVATION
+    updateTodayStreakAndMotivation(entries, habitsData)
+  }
+
+  const updateTodayStreakAndMotivation = (entries: any[], habitsData?: any[]) => {
+    // Calculate today's streak
     const todayEntries = entries.filter((e: any) => e.date === today && e.status === 'completed')
     const hasAnyDone = todayEntries.length > 0
     
+    let streak = 0
     if (hasAnyDone) {
-      // Count consecutive days with at least 1 habit done
-      let streak = 1
+      streak = 1
       let checkDate = new Date()
       checkDate.setDate(checkDate.getDate() - 1)
       
@@ -196,17 +201,14 @@ export default function Home() {
         }
         checkDate.setDate(checkDate.getDate() - 1)
       }
-      setTodayStreak(streak)
     } else {
-      // Check if yesterday had any completion
       const yesterday = new Date()
       yesterday.setDate(yesterday.getDate() - 1)
       const yesterdayStr = yesterday.toISOString().split('T')[0]
       const yesterdayEntries = entries.filter((e: any) => e.date === yesterdayStr && e.status === 'completed')
       
       if (yesterdayEntries.length > 0) {
-        // Count streak from yesterday backwards
-        let streak = 1
+        streak = 1
         let checkDate = new Date(yesterday)
         checkDate.setDate(checkDate.getDate() - 1)
         
@@ -220,16 +222,24 @@ export default function Home() {
           }
           checkDate.setDate(checkDate.getDate() - 1)
         }
-        setTodayStreak(streak)
       } else {
-        setTodayStreak(0)
+        streak = 0
       }
     }
-    
-    // Set motivation message
-    const progress = habitsData.length > 0 ? Math.round((habitsData.filter(h => h.done).length / habitsData.length) * 100) : 0
+    setTodayStreak(streak)
+
+    // Calculate progress for motivation
+    const dataToUse = habitsData || habits
+    const total = dataToUse.length
+    const completed = dataToUse.filter((h: any) => {
+      const entry = entries.find((e: any) => e.habit_id === h.id && e.date === today)
+      return entry?.status === 'completed'
+    }).length
+    const progress = total > 0 ? Math.round((completed / total) * 100) : 0
+    setCurrentProgress(progress)
+
     const quote = motivationalQuotes.find(q => progress >= q.min && progress <= q.max)
-    setMotivationMessage(quote ? quote.text : "🔥 Your grind starts now.")
+    setMotivationMessage(quote ? quote.text : "🔥 Your grind starts now. Own it.")
   }
 
   const toggleHabit = async (habitId: string) => {
@@ -298,6 +308,10 @@ export default function Home() {
     } catch (error) {
       console.error('Background sync error:', error)
     }
+    
+    // Update today's streak and motivation IMMEDIATELY with updated entries
+    const updatedEntriesAfterDb = [...updatedEntries]
+    updateTodayStreakAndMotivation(updatedEntriesAfterDb)
     
     setTogglingId(null)
   }
@@ -392,6 +406,12 @@ export default function Home() {
           <div className="flex justify-between items-start mb-6 pt-2">
             <div>
               <div className="flex items-center gap-2 mb-0.5">
+                {/* Professional SVG Icon instead of 🔥 */}
+                <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                    d="M13 10V3L4 14h7v7l9-11h-7z" 
+                  />
+                </svg>
                 <span className="text-xs font-light text-gray-500 tracking-widest uppercase">
                   {greeting}
                 </span>
@@ -458,7 +478,7 @@ export default function Home() {
                 <p className="text-xs text-gray-500 mt-0.5 font-light">
                   {completed} / {total} habits done
                 </p>
-                {/* Motivational Quote */}
+                {/* Motivational Quote - FIXED */}
                 <p className="text-sm text-indigo-400/80 font-medium mt-2 tracking-wide">
                   {motivationMessage}
                 </p>
@@ -490,7 +510,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* STATS: DONE, PENDING, STREAK */}
+        {/* STATS: DONE, PENDING, STREAK - STREAK NOW UPDATES IMMEDIATELY */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           {[
             { value: completed, label: 'DONE', color: 'text-emerald-400', icon: '✓' },
