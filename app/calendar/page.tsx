@@ -30,6 +30,16 @@ export default function Calendar() {
     }
     setHabits(habitsData)
 
+    // Find the earliest habit creation date
+    let earliestDate = new Date()
+    for (const habit of habitsData) {
+      const habitDate = new Date(habit.created_at)
+      if (habitDate < earliestDate) {
+        earliestDate = habitDate
+      }
+    }
+    const earliestDateStr = earliestDate.toISOString().split('T')[0]
+
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
     const firstDay = new Date(year, month, 1)
@@ -83,14 +93,21 @@ export default function Calendar() {
       const totalForDay = habitsThatExisted > 0 ? habitsThatExisted : habitsData.length
       
       let status = 'future'
-      if (dateStr < today) {
-        if (completed === totalForDay && totalForDay > 0) status = 'all-done'
-        else if (completed > 0) status = 'partial'
-        else status = 'missed'
-      } else if (dateStr === today) {
-        if (completed === totalForDay && totalForDay > 0) status = 'all-done'
-        else if (completed > 0) status = 'partial'
-        else status = 'pending'
+      
+      // Only show data for dates ON or AFTER the earliest habit creation
+      if (dateStr >= earliestDateStr) {
+        if (dateStr < today) {
+          if (completed === totalForDay && totalForDay > 0) status = 'all-done'
+          else if (completed > 0) status = 'partial'
+          else status = 'missed'
+        } else if (dateStr === today) {
+          if (completed === totalForDay && totalForDay > 0) status = 'all-done'
+          else if (completed > 0) status = 'partial'
+          else status = 'pending'
+        }
+      } else {
+        // Dates before app creation - show as "before" (no data)
+        status = 'before'
       }
       
       days.push({
@@ -108,7 +125,7 @@ export default function Calendar() {
   }
 
   const handleDayClick = (day: any) => {
-    if (!day.date) return
+    if (!day.date || day.status === 'before' || day.status === 'future') return
     setSelectedDay(day.date)
     setSelectedDayDetails(day.entries || [])
   }
@@ -127,6 +144,7 @@ export default function Calendar() {
       case 'missed': return '🔴'
       case 'pending': return '◈'
       case 'future': return '○'
+      case 'before': return '·'
       default: return '○'
     }
   }
@@ -158,7 +176,6 @@ export default function Calendar() {
           </div>
         </div>
 
-        {/* Month Navigation */}
         <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
           <button 
             onClick={() => changeMonth(-1)}
@@ -177,7 +194,6 @@ export default function Calendar() {
           </button>
         </div>
 
-        {/* Calendar Grid */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
           <div className="grid grid-cols-7 gap-1 mb-2">
             {dayNames.map((day, i) => (
@@ -198,8 +214,12 @@ export default function Calendar() {
               
               let bgColor = 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
               let borderColor = 'border-transparent'
+              let opacity = 'opacity-100'
               
-              if (day.status === 'all-done') {
+              if (day.status === 'before') {
+                bgColor = 'bg-gray-100/50 dark:bg-gray-800/30'
+                opacity = 'opacity-30'
+              } else if (day.status === 'all-done') {
                 bgColor = 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
               } else if (day.status === 'partial') {
                 bgColor = 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
@@ -217,7 +237,8 @@ export default function Calendar() {
                     ${bgColor}
                     ${isSelected ? 'ring-2 ring-indigo-400 dark:ring-indigo-500 shadow-md' : ''}
                     ${isToday ? 'border-2 border-indigo-400 dark:border-indigo-500' : borderColor}
-                    hover:scale-105
+                    ${opacity}
+                    ${day.status !== 'before' && day.status !== 'future' ? 'hover:scale-105' : ''}
                   `}
                 >
                   <span className={`text-sm font-medium
@@ -225,6 +246,7 @@ export default function Calendar() {
                     ${day.status === 'partial' ? 'text-amber-600 dark:text-amber-400' : ''}
                     ${day.status === 'missed' ? 'text-rose-500 dark:text-rose-400' : ''}
                     ${day.status === 'future' ? 'text-gray-400 dark:text-gray-500' : ''}
+                    ${day.status === 'before' ? 'text-gray-300 dark:text-gray-600' : ''}
                     ${day.status === 'pending' ? 'text-indigo-500 dark:text-indigo-400' : ''}
                   `}>
                     {day.day}
@@ -232,7 +254,7 @@ export default function Calendar() {
                   <span className="text-xs mt-0.5">
                     {getStatusEmoji(day.status)}
                   </span>
-                  {day.status !== 'future' && day.status !== 'empty' && day.status !== 'pending' && day.total > 0 && (
+                  {day.status !== 'future' && day.status !== 'empty' && day.status !== 'pending' && day.status !== 'before' && day.total > 0 && (
                     <span className="text-[8px] text-gray-400 dark:text-gray-500 mt-0.5">
                       {day.completed}/{day.total}
                     </span>
@@ -248,6 +270,7 @@ export default function Calendar() {
           <span>🟡 Partial</span>
           <span>🔴 Missed</span>
           <span>○ Future</span>
+          <span>· Before App</span>
         </div>
 
         {selectedDay && (
