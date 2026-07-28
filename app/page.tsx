@@ -176,12 +176,10 @@ export default function Home() {
     setStreaks(streakMap)
     setBestEverStreak(maxStreakOverall)
     
-    // Calculate TODAY'S STREAK and MOTIVATION
     updateTodayStreakAndMotivation(entries, habitsData)
   }
 
   const updateTodayStreakAndMotivation = (entries: any[], habitsData?: any[]) => {
-    // Calculate today's streak
     const todayEntries = entries.filter((e: any) => e.date === today && e.status === 'completed')
     const hasAnyDone = todayEntries.length > 0
     
@@ -228,7 +226,6 @@ export default function Home() {
     }
     setTodayStreak(streak)
 
-    // Calculate progress for motivation
     const dataToUse = habitsData || habits
     const total = dataToUse.length
     const completed = dataToUse.filter((h: any) => {
@@ -309,7 +306,6 @@ export default function Home() {
       console.error('Background sync error:', error)
     }
     
-    // Update today's streak and motivation IMMEDIATELY
     const updatedEntriesAfterDb = [...updatedEntries]
     updateTodayStreakAndMotivation(updatedEntriesAfterDb)
     
@@ -352,10 +348,10 @@ export default function Home() {
     day: 'numeric' 
   })
 
-  // Splash Screen - FIXED
+  // Splash Screen
   if (showSplash) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center p-6">
+      <div className="min-h-screen bg-black flex items-center justify-center p-6">
         <div className="text-center animate-scale">
           <div className="mb-4 animate-float-card">
             <svg className="w-12 h-12 text-indigo-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -370,7 +366,7 @@ export default function Home() {
           <h1 className="text-3xl font-bold text-white/90 tracking-tight">
             Bharath K
           </h1>
-          <p className="text-sm text-gray-500 mt-3 font-light tracking-wide animate-pulse">
+          <p className="text-sm text-white/30 mt-3 font-light tracking-wide animate-pulse">
             Loading your habits...
           </p>
           <div className="mt-5 flex justify-center gap-1.5">
@@ -389,17 +385,17 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4 animate-pulse text-indigo-400">⟳</div>
-          <p className="text-gray-500 font-light">Loading your habits...</p>
+          <p className="text-white/40 font-light">Loading your habits...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 p-4 pb-24 relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white p-4 pb-24 relative overflow-hidden">
       
       {/* Subtle Background Glow */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl" />
@@ -417,7 +413,7 @@ export default function Home() {
                     d="M13 10V3L4 14h7v7l9-11h-7z" 
                   />
                 </svg>
-                <span className="text-xs font-light text-gray-500 tracking-widest uppercase">
+                <span className="text-xs font-light text-white/40 tracking-widest uppercase">
                   {greeting}
                 </span>
                 <span className="text-xs text-indigo-400/40 animate-pulse">●</span>
@@ -425,18 +421,18 @@ export default function Home() {
               <h1 className="text-2xl font-bold text-white/90 tracking-tight">
                 Bharath K
               </h1>
-              <p className="text-xs text-gray-500 mt-0.5 font-light">
+              <p className="text-xs text-white/30 mt-0.5 font-light">
                 {dateDisplay}
               </p>
             </div>
             
-            <div className="flex gap-0.5 bg-gray-800/50 p-1 rounded-xl border border-gray-700/30">
+            <div className="flex gap-0.5 bg-black/40 p-1 rounded-xl border border-white/5">
               <Link 
                 href="/calendar" 
                 className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
                 onClick={(e) => e.stopPropagation()}
               >
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
                     d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
                   />
@@ -447,7 +443,7 @@ export default function Home() {
                 className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
                 onClick={(e) => e.stopPropagation()}
               >
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
                     d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
                   />
@@ -458,7 +454,7 @@ export default function Home() {
                 className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
                 onClick={(e) => e.stopPropagation()}
               >
-                <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
                     d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" 
                   />
@@ -473,14 +469,14 @@ export default function Home() {
 
         {/* PROGRESS + ENERGY RING */}
         <div className="animate-fade-up delay-1">
-          <div className="glass-dark rounded-2xl p-5 mb-5 border border-gray-700/30 animate-glow-pulse">
+          <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-5 mb-5 border border-white/5 animate-glow-pulse">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500 font-light tracking-wider uppercase">Today's Energy</p>
+                <p className="text-xs text-white/30 font-light tracking-wider uppercase">Today's Energy</p>
                 <p className="text-3xl font-bold text-white/90">
                   {progress}%
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5 font-light">
+                <p className="text-xs text-white/30 mt-0.5 font-light">
                   {completed} / {total} habits done
                 </p>
                 <p className="text-sm text-indigo-400/80 font-medium mt-2 tracking-wide">
@@ -489,7 +485,7 @@ export default function Home() {
               </div>
               <div className="relative w-20 h-20">
                 <svg className="transform -rotate-90 w-20 h-20">
-                  <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(55,65,81,0.4)" strokeWidth="6"/>
+                  <circle cx="40" cy="40" r="32" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6"/>
                   <circle 
                     cx="40" cy="40" r="32" 
                     fill="none" 
@@ -506,7 +502,7 @@ export default function Home() {
                     </linearGradient>
                   </defs>
                 </svg>
-                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white/80">
+                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-white/60">
                   {progress}%
                 </span>
               </div>
@@ -525,11 +521,11 @@ export default function Home() {
               key={i} 
               className={`animate-fade-up delay-${i + 2}`}
             >
-              <div className="glass-dark rounded-xl p-3.5 text-center border border-gray-700/30 hover:border-indigo-500/20 transition-all duration-300">
+              <div className="bg-black/60 backdrop-blur-xl rounded-xl p-3.5 text-center border border-white/5 hover:border-white/10 transition-all duration-300">
                 <div className={`text-xl font-bold ${stat.color}`}>
                   {stat.icon} {stat.value}
                 </div>
-                <div className="text-[8px] text-gray-500 tracking-widest">{stat.label}</div>
+                <div className="text-[8px] text-white/30 tracking-widest">{stat.label}</div>
               </div>
             </div>
           ))}
@@ -538,22 +534,22 @@ export default function Home() {
         {/* ALL-TIME BEST STREAK */}
         {bestEverStreak > 0 && (
           <div className={`animate-fade-up delay-3`}>
-            <div className="glass-dark rounded-xl p-3.5 mb-5 border border-gray-700/30 flex items-center justify-between">
+            <div className="bg-black/60 backdrop-blur-xl rounded-xl p-3.5 mb-5 border border-white/5 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="text-xl">🏆</span>
                 <div>
-                  <p className="text-[9px] text-gray-500 tracking-wider uppercase">All-Time Best</p>
+                  <p className="text-[9px] text-white/30 tracking-wider uppercase">All-Time Best</p>
                   <p className="text-lg font-bold text-white/90">{bestEverStreak} days</p>
                 </div>
               </div>
-              <span className="text-2xl opacity-50">⚡</span>
+              <span className="text-2xl opacity-30">⚡</span>
             </div>
           </div>
         )}
 
         {/* HABITS */}
         <div className="mb-3">
-          <p className="text-[10px] text-gray-500 tracking-widest uppercase font-light">
+          <p className="text-[10px] text-white/30 tracking-widest uppercase font-light">
             Active Habits · {habits.length}
           </p>
         </div>
@@ -572,10 +568,10 @@ export default function Home() {
                 className={`animate-fade-up delay-${delay} transform transition-all duration-300 cursor-pointer`}
               >
                 <div className={`
-                  glass-card rounded-xl p-3.5 border transition-all duration-300
+                  bg-black/60 backdrop-blur-xl rounded-xl p-3.5 border transition-all duration-300
                   ${isDone 
                     ? 'border-emerald-500/20 bg-emerald-500/5' 
-                    : 'border-gray-700/30 hover:border-indigo-500/20 hover:bg-gray-800/40'
+                    : 'border-white/5 hover:border-white/10 hover:bg-white/5'
                   }
                   ${isToggling ? 'opacity-50' : 'opacity-100'}
                   hover:scale-[1.01] hover:shadow-lg hover:shadow-indigo-500/5
@@ -589,7 +585,7 @@ export default function Home() {
                         <div className="flex items-center gap-2">
                           <span className="text-lg">{habit.name.split(' ')[0]}</span>
                           <p className={`text-sm font-medium transition-all duration-300
-                            ${isDone ? 'line-through text-gray-500' : 'text-white/90'}
+                            ${isDone ? 'line-through text-white/30' : 'text-white/80'}
                           `}>
                             {habit.name.split(' ').slice(1).join(' ')}
                           </p>
@@ -600,7 +596,7 @@ export default function Home() {
                           </p>
                         )}
                         {streak === 0 && isDone && (
-                          <p className="text-[9px] text-gray-500 font-medium mt-0.5 tracking-wider">
+                          <p className="text-[9px] text-white/30 font-medium mt-0.5 tracking-wider">
                             ✦ Started today
                           </p>
                         )}
@@ -629,7 +625,7 @@ export default function Home() {
           {!showAddForm ? (
             <button 
               onClick={() => setShowAddForm(true)}
-              className="w-full py-3.5 glass-dark border border-gray-700/30 hover:border-indigo-500/30 text-white/80 hover:text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-[1.01] active:scale-95"
+              className="w-full py-3.5 bg-black/60 backdrop-blur-xl border border-white/5 hover:border-white/20 text-white/70 hover:text-white rounded-xl font-medium text-sm transition-all duration-300 hover:scale-[1.01] active:scale-95"
             >
               <span className="flex items-center justify-center gap-2">
                 <span className="text-lg text-indigo-400">+</span>
@@ -637,13 +633,13 @@ export default function Home() {
               </span>
             </button>
           ) : (
-            <div className="glass-dark rounded-xl p-4 border border-gray-700/30">
+            <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5">
               <input
                 type="text"
                 placeholder="Enter habit name..."
                 value={newHabitName}
                 onChange={(e) => setNewHabitName(e.target.value)}
-                className="w-full p-3 bg-gray-900/50 border border-gray-700/30 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition-all text-white placeholder:text-gray-500 text-sm"
+                className="w-full p-3 bg-black/50 border border-white/5 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition-all text-white placeholder:text-white/30 text-sm"
                 autoFocus
               />
               <div className="flex gap-1.5 flex-wrap mb-3">
@@ -667,7 +663,7 @@ export default function Home() {
                 </button>
                 <button
                   onClick={() => setShowAddForm(false)}
-                  className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-lg font-medium text-sm transition-all"
+                  className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white/40 rounded-lg font-medium text-sm transition-all"
                 >
                   Cancel
                 </button>
@@ -678,7 +674,7 @@ export default function Home() {
 
         {/* Footer */}
         <div className="mt-6 text-center">
-          <p className="text-[8px] text-gray-600 tracking-widest font-light">
+          <p className="text-[8px] text-white/20 tracking-widest font-light">
             STAY DISCIPLINED · STAY FOCUSED
           </p>
         </div>
