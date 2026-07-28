@@ -19,7 +19,6 @@ export default function Home() {
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
   const today = new Date().toISOString().split('T')[0]
 
-  // Define the custom order for habits
   const habitOrder = ['Workout', 'Reading', 'Journal', 'Business Skillset', 'Skincare']
 
   useEffect(() => {
@@ -127,12 +126,11 @@ export default function Home() {
       
       streakMap[habit.id] = streak
       
-      // Calculate best ever streak for this habit (look at ALL entries)
+      // Calculate best ever streak for this habit
       let bestStreak = 0
       let tempStreak = 0
       let prevDate: Date | null = null
       
-      // Sort entries ascending for best streak calculation
       const sortedAsc = [...habitEntries].sort(
         (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()
       )
@@ -154,7 +152,6 @@ export default function Home() {
       }
       bestStreak = Math.max(bestStreak, tempStreak)
       
-      // Track the overall best streak across all habits
       if (bestStreak > maxStreakOverall) {
         maxStreakOverall = bestStreak
       }
@@ -270,10 +267,7 @@ export default function Home() {
     day: 'numeric' 
   })
 
-  // Premium animated particles
-  const particles = [
-    '✦', '◇', '◈', '▣', '◉', '◎', '●', '○', '◆', '☆', '★', '✧'
-  ]
+  const particles = ['✦', '◇', '◈', '▣', '◉', '◎', '●', '○', '◆', '☆', '★', '✧']
 
   if (loading) {
     return (
@@ -289,7 +283,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20 overflow-hidden relative">
       
-      {/* Premium Animated Background */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {particles.map((el, i) => (
           <div
@@ -308,7 +301,6 @@ export default function Home() {
           </div>
         ))}
         
-        {/* Gradient orbs for depth */}
         <div className="absolute -top-20 -right-20 w-72 h-72 bg-indigo-200/10 dark:bg-indigo-400/5 rounded-full blur-3xl animate-pulse-slow"></div>
         <div className="absolute -bottom-20 -left-20 w-72 h-72 bg-purple-200/10 dark:bg-purple-400/5 rounded-full blur-3xl animate-pulse-slow animation-delay-1000"></div>
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-200/5 dark:bg-amber-400/3 rounded-full blur-3xl animate-pulse-slow animation-delay-2000"></div>
@@ -316,7 +308,6 @@ export default function Home() {
 
       <div className="max-w-md mx-auto relative z-10">
         
-        {/* Header */}
         <div className="flex justify-between items-start mb-8">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -334,7 +325,6 @@ export default function Home() {
             </p>
           </div>
           
-          {/* Icons */}
           <div className="flex gap-1 bg-white/50 dark:bg-gray-800/50 p-1 rounded-2xl backdrop-blur-sm border border-gray-200/30 dark:border-gray-700/30">
             <Link 
               href="/calendar" 
@@ -375,7 +365,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Progress Card */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-lg dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-6 relative overflow-hidden group transition-all duration-300 hover:shadow-xl">
           <div className="absolute -top-10 -right-10 text-7xl opacity-[0.03] dark:opacity-[0.05] animate-float-slow">◈</div>
           <div className="flex items-center justify-between relative z-10">
@@ -406,7 +395,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
             { value: completed, label: 'Done', color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
@@ -420,7 +408,7 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Best Streak Card - Shows ALL-TIME BEST */}
+        {/* Best Streak Card - Fixed: shows correct all-time best */}
         <div className="bg-gradient-to-r from-amber-50/80 via-orange-50/80 to-rose-50/80 dark:from-amber-900/20 dark:via-orange-900/20 dark:to-rose-900/20 border border-amber-200/50 dark:border-amber-800/30 rounded-2xl p-4 mb-6 flex items-center justify-between group transition-all duration-500 hover:scale-[1.02] hover:shadow-lg">
           <div className="flex items-center gap-3">
             <div className="text-3xl animate-bounce-slow">🏆</div>
@@ -433,7 +421,6 @@ export default function Home() {
           <div className="text-5xl animate-float-slow group-hover:animate-none">🔥</div>
         </div>
 
-        {/* Habits Section */}
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 tracking-wide">Today's Habits</h2>
           <span className="text-xs text-gray-400 dark:text-gray-500">{habits.length} active</span>
@@ -491,7 +478,6 @@ export default function Home() {
           })}
         </div>
 
-        {/* Add Habit Button */}
         {!showAddForm ? (
           <button 
             onClick={() => setShowAddForm(true)}
