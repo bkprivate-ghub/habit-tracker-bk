@@ -30,7 +30,6 @@ export default function Calendar() {
     }
     setHabits(habitsData)
 
-    // Find the earliest habit creation date
     let earliestDate = new Date()
     for (const habit of habitsData) {
       const habitDate = new Date(habit.created_at)
@@ -80,7 +79,6 @@ export default function Calendar() {
       const dayEntries = map.get(dateStr) || []
       const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
-      // Calculate how many habits existed on this date
       let habitsThatExisted = 0
       for (const habit of habitsData) {
         const habitCreatedAt = new Date(habit.created_at)
@@ -94,7 +92,6 @@ export default function Calendar() {
       
       let status = 'future'
       
-      // Only show data for dates ON or AFTER the earliest habit creation
       if (dateStr >= earliestDateStr) {
         if (dateStr < today) {
           if (completed === totalForDay && totalForDay > 0) status = 'all-done'
@@ -106,7 +103,6 @@ export default function Calendar() {
           else status = 'pending'
         }
       } else {
-        // Dates before app creation - show as "before" (no data)
         status = 'before'
       }
       
@@ -154,50 +150,57 @@ export default function Calendar() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4 animate-pulse text-gray-600 dark:text-gray-300">🗓️</div>
-          <p className="text-gray-500 dark:text-gray-400 font-light">Loading calendar...</p>
+          <div className="text-4xl mb-4 animate-pulse text-indigo-400">🗓️</div>
+          <p className="text-gray-500 font-light">Loading calendar...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20">
-      <div className="max-w-md mx-auto">
+    <div className="min-h-screen bg-black text-gray-100 p-4 pb-20 relative overflow-hidden">
+      
+      {/* Subtle Background Glow */}
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl" />
+      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+
+      <div className="max-w-md mx-auto relative z-10">
         
         <div className="flex justify-between items-center mb-6">
           <div>
-            <Link href="/" className="text-indigo-600 dark:text-indigo-400 text-sm mb-1 inline-block hover:text-indigo-700 dark:hover:text-indigo-300 transition">
+            <Link href="/" className="text-indigo-400 hover:text-indigo-300 text-sm mb-1 inline-block transition-all">
               ← Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">🗓️ Calendar</h1>
+            <h1 className="text-2xl font-bold text-white/90">🗓️ Calendar</h1>
           </div>
         </div>
 
-        <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
+        {/* Month Navigation */}
+        <div className="flex items-center justify-between bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
           <button 
             onClick={() => changeMonth(-1)}
-            className="text-2xl p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition text-gray-600 dark:text-gray-300"
+            className="text-xl p-2 hover:bg-white/5 rounded-full transition text-white/60 hover:text-white"
           >
             ◀
           </button>
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+          <h2 className="text-lg font-semibold text-white/90">
             {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
           </h2>
           <button 
             onClick={() => changeMonth(1)}
-            className="text-2xl p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition text-gray-600 dark:text-gray-300"
+            className="text-xl p-2 hover:bg-white/5 rounded-full transition text-white/60 hover:text-white"
           >
             ▶
           </button>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
+        {/* Calendar Grid */}
+        <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
           <div className="grid grid-cols-7 gap-1 mb-2">
             {dayNames.map((day, i) => (
-              <div key={i} className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-1">
+              <div key={i} className="text-center text-xs font-medium text-white/40 py-1">
                 {day}
               </div>
             ))}
@@ -212,21 +215,21 @@ export default function Calendar() {
               const isToday = day.date === new Date().toISOString().split('T')[0]
               const isSelected = day.date === selectedDay
               
-              let bgColor = 'bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700'
+              let bgColor = 'hover:bg-white/5'
               let borderColor = 'border-transparent'
               let opacity = 'opacity-100'
               
               if (day.status === 'before') {
-                bgColor = 'bg-gray-100/50 dark:bg-gray-800/30'
+                bgColor = 'opacity-30'
                 opacity = 'opacity-30'
               } else if (day.status === 'all-done') {
-                bgColor = 'bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+                bgColor = 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20'
               } else if (day.status === 'partial') {
-                bgColor = 'bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30'
+                bgColor = 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20'
               } else if (day.status === 'missed') {
-                bgColor = 'bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30'
+                bgColor = 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20'
               } else if (day.status === 'future') {
-                bgColor = 'bg-gray-50 dark:bg-gray-800/50'
+                bgColor = 'hover:bg-white/5'
               }
               
               return (
@@ -235,19 +238,20 @@ export default function Calendar() {
                   onClick={() => handleDayClick(day)}
                   className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all
                     ${bgColor}
-                    ${isSelected ? 'ring-2 ring-indigo-400 dark:ring-indigo-500 shadow-md' : ''}
-                    ${isToday ? 'border-2 border-indigo-400 dark:border-indigo-500' : borderColor}
+                    ${isSelected ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-500/10' : ''}
+                    ${isToday ? 'border-2 border-indigo-400' : borderColor}
                     ${opacity}
                     ${day.status !== 'before' && day.status !== 'future' ? 'hover:scale-105' : ''}
                   `}
                 >
                   <span className={`text-sm font-medium
-                    ${day.status === 'all-done' ? 'text-emerald-600 dark:text-emerald-400' : ''}
-                    ${day.status === 'partial' ? 'text-amber-600 dark:text-amber-400' : ''}
-                    ${day.status === 'missed' ? 'text-rose-500 dark:text-rose-400' : ''}
-                    ${day.status === 'future' ? 'text-gray-400 dark:text-gray-500' : ''}
-                    ${day.status === 'before' ? 'text-gray-300 dark:text-gray-600' : ''}
-                    ${day.status === 'pending' ? 'text-indigo-500 dark:text-indigo-400' : ''}
+                    ${day.status === 'all-done' ? 'text-emerald-400' : ''}
+                    ${day.status === 'partial' ? 'text-amber-400' : ''}
+                    ${day.status === 'missed' ? 'text-rose-400' : ''}
+                    ${day.status === 'future' ? 'text-white/30' : ''}
+                    ${day.status === 'before' ? 'text-white/20' : ''}
+                    ${day.status === 'pending' ? 'text-indigo-400' : ''}
+                    ${day.status === 'all-done' ? 'font-bold' : ''}
                   `}>
                     {day.day}
                   </span>
@@ -255,7 +259,7 @@ export default function Calendar() {
                     {getStatusEmoji(day.status)}
                   </span>
                   {day.status !== 'future' && day.status !== 'empty' && day.status !== 'pending' && day.status !== 'before' && day.total > 0 && (
-                    <span className="text-[8px] text-gray-400 dark:text-gray-500 mt-0.5">
+                    <span className="text-[8px] text-white/30 mt-0.5">
                       {day.completed}/{day.total}
                     </span>
                   )}
@@ -265,18 +269,18 @@ export default function Calendar() {
           </div>
         </div>
 
-        <div className="flex justify-center gap-4 text-xs text-gray-500 dark:text-gray-400 mb-4">
+        <div className="flex justify-center gap-4 text-xs text-white/40 mb-4">
           <span>🟢 All Done</span>
           <span>🟡 Partial</span>
           <span>🔴 Missed</span>
           <span>○ Future</span>
-          <span>· Before App</span>
+          <span>· Before</span>
         </div>
 
         {selectedDay && (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 animate-slide-up">
+          <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 animate-fade-up">
             <div className="flex justify-between items-center mb-3">
-              <h3 className="font-semibold text-gray-800 dark:text-white">
+              <h3 className="font-semibold text-white/90">
                 {new Date(selectedDay).toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   month: 'long', 
@@ -285,25 +289,25 @@ export default function Calendar() {
               </h3>
               <button 
                 onClick={() => setSelectedDay(null)}
-                className="text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 transition"
+                className="text-white/40 hover:text-white/60 transition"
               >
                 ✕
               </button>
             </div>
             
             {selectedDayDetails.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">No habits tracked this day</p>
+              <p className="text-sm text-white/40">No habits tracked this day</p>
             ) : (
               <div className="space-y-1">
                 {selectedDayDetails.map((entry: any, i: number) => {
                   const habit = habits.find(h => h.id === entry.habit_id)
                   return (
-                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
+                      <span className="text-sm text-white/70">
                         {habit?.name || 'Unknown habit'}
                       </span>
                       <span className={`text-sm font-medium
-                        ${entry.status === 'completed' ? 'text-emerald-500 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500'}`}
+                        ${entry.status === 'completed' ? 'text-emerald-400' : 'text-white/30'}`}
                       >
                         {entry.status === 'completed' ? '✅' : '◻️'}
                       </span>
@@ -316,23 +320,23 @@ export default function Calendar() {
         )}
 
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
-            <div className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+          <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-3 border border-white/5 text-center">
+            <div className="text-lg font-bold text-emerald-400">
               {calendarData.filter((d: any) => d.status === 'all-done').length}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Perfect Days</div>
+            <div className="text-[10px] text-white/40">Perfect Days</div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
-            <div className="text-lg font-bold text-amber-600 dark:text-amber-400">
+          <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-3 border border-white/5 text-center">
+            <div className="text-lg font-bold text-amber-400">
               {calendarData.filter((d: any) => d.status === 'partial').length}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Partial Days</div>
+            <div className="text-[10px] text-white/40">Partial Days</div>
           </div>
-          <div className="bg-white dark:bg-gray-800 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-center">
-            <div className="text-lg font-bold text-rose-500 dark:text-rose-400">
+          <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-3 border border-white/5 text-center">
+            <div className="text-lg font-bold text-rose-400">
               {calendarData.filter((d: any) => d.status === 'missed').length}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400">Missed Days</div>
+            <div className="text-[10px] text-white/40">Missed Days</div>
           </div>
         </div>
 
