@@ -4,10 +4,13 @@
 
 @layer utilities {
   .glass-dark {
-    @apply bg-gray-900/80 backdrop-blur-xl border border-gray-700/30;
+    @apply bg-black/80 backdrop-blur-xl border border-white/5;
   }
   .glass-card {
-    @apply bg-gray-800/60 backdrop-blur-md border border-gray-700/30;
+    @apply bg-black/60 backdrop-blur-md border border-white/5;
+  }
+  .glass-white {
+    @apply bg-white/5 backdrop-blur-md border border-white/5;
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
@@ -18,7 +21,7 @@
   }
 }
 
-/* Dark Manly Theme - Animations */
+/* Blacked Theme - Animations */
 @keyframes fadeInUp {
   from {
     opacity: 0;
@@ -45,28 +48,6 @@
   }
   50% {
     box-shadow: 0 0 40px rgba(99, 102, 241, 0.12);
-  }
-}
-
-@keyframes slide-in-left {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slide-in-right {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
   }
 }
 
@@ -100,14 +81,6 @@
 
 .animate-glow-pulse {
   animation: glow-pulse 3s ease-in-out infinite;
-}
-
-.animate-slide-left {
-  animation: slide-in-left 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
-
-.animate-slide-right {
-  animation: slide-in-right 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 .animate-scale {
@@ -160,7 +133,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(31, 41, 55, 0.5);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .habit-toggle .checkmark.completed {
@@ -206,29 +179,25 @@
   background-clip: text;
 }
 
-/* Energy Pulse Ring */
-.energy-ring {
-  position: relative;
+/* Black Theme Specific */
+.bg-black-theme {
+  background: #0a0a0a;
 }
 
-.energy-ring .ring-bg {
-  fill: none;
-  stroke: rgba(55, 65, 81, 0.4);
-  stroke-width: 6;
+.bg-black-card {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.energy-ring .ring-progress {
-  fill: none;
-  stroke: url(#energyGradient);
-  stroke-width: 6;
-  stroke-linecap: round;
-  transition: stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1);
+.text-white-contrast {
+  color: rgba(255, 255, 255, 0.9);
 }
 
-/* Motivational Quote Style */
-.motivation-text {
-  background: linear-gradient(135deg, #818CF8, #A78BFA);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+.text-white-subtle {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.border-white-subtle {
+  border-color: rgba(255, 255, 255, 0.05);
 }
