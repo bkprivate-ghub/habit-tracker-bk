@@ -309,7 +309,7 @@ export default function Home() {
       console.error('Background sync error:', error)
     }
     
-    // Update today's streak and motivation IMMEDIATELY with updated entries
+    // Update today's streak and motivation IMMEDIATELY
     const updatedEntriesAfterDb = [...updatedEntries]
     updateTodayStreakAndMotivation(updatedEntriesAfterDb)
     
@@ -352,12 +352,18 @@ export default function Home() {
     day: 'numeric' 
   })
 
-  // Splash Screen
+  // Splash Screen - FIXED
   if (showSplash) {
     return (
       <div className="min-h-screen bg-gray-950 flex items-center justify-center p-6">
         <div className="text-center animate-scale">
-          <div className="text-5xl mb-4 animate-float-card">🔥</div>
+          <div className="mb-4 animate-float-card">
+            <svg className="w-12 h-12 text-indigo-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                d="M13 10V3L4 14h7v7l9-11h-7z" 
+              />
+            </svg>
+          </div>
           <div className="text-xs font-light text-indigo-400/60 tracking-widest uppercase mb-2">
             {greeting}
           </div>
@@ -406,7 +412,6 @@ export default function Home() {
           <div className="flex justify-between items-start mb-6 pt-2">
             <div>
               <div className="flex items-center gap-2 mb-0.5">
-                {/* Professional SVG Icon instead of 🔥 */}
                 <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
                     d="M13 10V3L4 14h7v7l9-11h-7z" 
@@ -478,7 +483,6 @@ export default function Home() {
                 <p className="text-xs text-gray-500 mt-0.5 font-light">
                   {completed} / {total} habits done
                 </p>
-                {/* Motivational Quote - FIXED */}
                 <p className="text-sm text-indigo-400/80 font-medium mt-2 tracking-wide">
                   {motivationMessage}
                 </p>
@@ -510,7 +514,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* STATS: DONE, PENDING, STREAK - STREAK NOW UPDATES IMMEDIATELY */}
+        {/* STATS: DONE, PENDING, STREAK */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           {[
             { value: completed, label: 'DONE', color: 'text-emerald-400', icon: '✓' },
@@ -547,7 +551,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* HABITS - Floating Visual Cards */}
+        {/* HABITS */}
         <div className="mb-3">
           <p className="text-[10px] text-gray-500 tracking-widest uppercase font-light">
             Active Habits · {habits.length}
