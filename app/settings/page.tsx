@@ -63,8 +63,9 @@ export default function Settings() {
       return
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Image must be less than 2MB')
+    // Increased to 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Image must be less than 10MB')
       return
     }
 
@@ -142,7 +143,6 @@ export default function Settings() {
   const handleSignOut = () => {
     if (confirm('Are you sure you want to sign out?')) {
       localStorage.removeItem('habitUser')
-      // Redirect to PIN entry page
       window.location.href = '/'
     }
   }
@@ -218,7 +218,6 @@ export default function Settings() {
               <h3 className="text-lg font-semibold text-white/90">
                 {currentUser?.name || 'User'}
               </h3>
-              <p className="text-sm text-white/30">PIN: ••••</p>
               <p className="text-xs text-white/20 mt-1">Member since {currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Today'}</p>
               <div className="flex gap-3 mt-1">
                 <button
