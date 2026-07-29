@@ -10,27 +10,29 @@ export default function Settings() {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [user, setUser] = useState<any>(null)
+  const [hasPin, setHasPin] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadData()
+    // Check if PIN is set
+    const pin = localStorage.getItem('habitPin')
+    setHasPin(!!pin)
   }, [])
 
   const loadData = async () => {
     setLoading(true)
     
-    // Get current user
     const { data: { user: currentUser } } = await supabase.auth.getUser()
     setUser(currentUser)
 
-    // Load habits
     const { data: habitsData } = await supabase
       .from('habits')
       .select('*')
+      .eq('user_id', currentUser?.id || '00000000-0000-0000-0000-000000000000')
       .order('created_at', { ascending: true })
     if (habitsData) setHabits(habitsData)
 
-    // Load profile
     if (currentUser) {
       const { data: profileData } = await supabase
         .from('profiles')
@@ -41,7 +43,6 @@ export default function Settings() {
       if (profileData) {
         setProfile(profileData)
       } else {
-        // Create profile if doesn't exist
         const { data: newProfile } = await supabase
           .from('profiles')
           .insert([{ 
@@ -92,7 +93,7 @@ export default function Settings() {
 
     try {
       const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (!currentUser) throw new Error('No user found. Please log in.')
+      if (!currentUser) throw new Error('No user found')
 
       const fileExt = file.name.split('.').pop()
       const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`
@@ -162,10 +163,41 @@ export default function Settings() {
     }
   }
 
-  const handleLogout = async () => {
-    if (confirm('Are you sure you want to sign out?')) {
-      await supabase.auth.signOut()
-      window.location.href = '/login'
+  const handleSetPin = () => {
+    const newPin = prompt('Enter a 4-digit PIN:')
+    if (newPin && newPin.length === 4 && /^\d{4}$/.test(newPin)) {
+      localStorage.setItem('habitPin', newPin)
+      localStorage.setItem('habitPinSet', 'true')
+      setHasPin(true)
+      alert('PIN set successfully!')
+    } else if (newPin) {
+      alert('PIN must be exactly 4 digits')
+    }
+  }
+
+  const handleChangePin = () => {
+    const currentPin = prompt('Enter your current PIN:')
+    const savedPin = localStorage.getItem('habitPin')
+    
+    if (currentPin === savedPin) {
+      const newPin = prompt('Enter new 4-digit PIN:')
+      if (newPin && newPin.length === 4 && /^\d{4}$/.test(newPin)) {
+        localStorage.setItem('habitPin', newPin)
+        alert('PIN updated successfully!')
+      } else if (newPin) {
+        alert('PIN must be exactly 4 digits')
+      }
+    } else {
+      alert('Incorrect PIN')
+    }
+  }
+
+  const handleRemovePin = () => {
+    if (confirm('Remove PIN protection? Everyone can access the app.')) {
+      localStorage.removeItem('habitPin')
+      localStorage.removeItem('habitPinSet')
+      setHasPin(false)
+      alert('PIN removed!')
     }
   }
 
@@ -197,7 +229,7 @@ export default function Settings() {
           </div>
         </div>
 
-        {/* Profile Card with Photo Upload */}
+        {/* Profile Card */}
         <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-6 border border-white/5 mb-4">
           <h2 className="text-sm font-semibold text-white/40 mb-4">Profile</h2>
           
@@ -295,6 +327,35 @@ export default function Settings() {
           )}
         </div>
 
+        {/* Security - PIN Settings */}
+        <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
+          <h2 className="text-sm font-semibold text-white/40 mb-3">🔐 Security</h2>
+          
+          {!hasPin ? (
+            <button
+              onClick={handleSetPin}
+              className="w-full py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-sm transition-all"
+            >
+              Set PIN
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handleChangePin}
+                className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg text-sm transition-all"
+              >
+                Change PIN
+              </button>
+              <button
+                onClick={handleRemovePin}
+                className="w-full mt-2 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-sm transition-all"
+              >
+                Remove PIN
+              </button>
+            </>
+          )}
+        </div>
+
         {/* Account Section */}
         <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5">
           <h2 className="text-sm font-semibold text-white/40 mb-3">Account</h2>
@@ -305,7 +366,12 @@ export default function Settings() {
           </div>
           
           <button
-            onClick={handleLogout}
+            onClick={async () => {
+              if (confirm('Are you sure you want to sign out?')) {
+                await supabase.auth.signOut()
+                window.location.href = '/login'
+              }
+            }}
             className="w-full mt-3 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl font-medium text-sm transition-all"
           >
             Sign Out
