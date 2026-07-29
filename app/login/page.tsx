@@ -14,7 +14,6 @@ export default function Login() {
   const router = useRouter()
 
   useEffect(() => {
-    // Check if already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         router.push('/')
@@ -70,14 +69,12 @@ export default function Login() {
     <div className="min-h-screen bg-black flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         
-        {/* Logo/Header */}
         <div className="text-center mb-8">
           <div className="text-4xl mb-3">⚡</div>
           <h1 className="text-2xl font-bold text-white/90">HabitTracker</h1>
           <p className="text-sm text-white/30 mt-1">Track your habits, achieve your goals</p>
         </div>
 
-        {/* Login Card */}
         <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
           <div className="flex gap-2 mb-6">
             <button
