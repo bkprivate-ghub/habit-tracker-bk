@@ -63,9 +63,9 @@ export default function Settings() {
       return
     }
 
-    // Increased to 10MB
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Image must be less than 10MB')
+    // 50MB limit
+    if (file.size > 50 * 1024 * 1024) {
+      alert('Image must be less than 50MB')
       return
     }
 
