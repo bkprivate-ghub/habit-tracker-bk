@@ -74,6 +74,21 @@ export default function Home() {
     }
   }, [isUnlocked, currentUser])
 
+  // --- AUTO SUBMIT PIN ON 4TH DIGIT ---
+  useEffect(() => {
+    if (!isSignUp && enteredPin.length === 4) {
+      // Auto-submit after 4th digit
+      handleSignIn()
+    }
+  }, [enteredPin])
+
+  useEffect(() => {
+    if (isSignUp && pin.length === 4) {
+      // Focus on the "Create Account" button after pin is complete
+      // The button will be enabled and user can click it
+    }
+  }, [pin])
+
   const loadAllData = async () => {
     setLoading(true)
     
@@ -121,7 +136,6 @@ export default function Home() {
     setAuthError('')
 
     try {
-      // Check if PIN already exists
       const { data: existingUser, error: checkError } = await supabase
         .from('users')
         .select('id')
@@ -134,7 +148,6 @@ export default function Home() {
         return
       }
 
-      // Create new user
       const { data: newUser, error: insertError } = await supabase
         .from('users')
         .insert([{ name: name.trim(), pin: pin }])
@@ -580,7 +593,7 @@ export default function Home() {
                 </p>
               </>
             ) : (
-              // SIGN IN FORM
+              // SIGN IN FORM - Auto-submit after 4th digit
               <>
                 <p className="text-sm text-white/40 text-center mb-4">Enter your 4-digit PIN</p>
                 <div className="flex justify-center gap-3 mb-6">
@@ -596,6 +609,7 @@ export default function Home() {
                         const newPin = enteredPin.split('')
                         newPin[i] = e.target.value.replace(/[^0-9]/, '')
                         setEnteredPin(newPin.join(''))
+                        // Auto-submit happens via useEffect when length === 4
                         if (e.target.value && i < 3) {
                           const nextInput = document.getElementById(`signin-pin-${i + 1}`)
                           if (nextInput) nextInput.focus()
@@ -697,7 +711,7 @@ export default function Home() {
 
       <div className="max-w-md mx-auto relative z-10">
         
-        {/* HEADER with Profile */}
+        {/* HEADER with Profile Photo - BIGGER */}
         <div className="animate-fade-up delay-0">
           <div className="flex justify-between items-start mb-6 pt-2">
             <div>
@@ -720,10 +734,11 @@ export default function Home() {
               </p>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              {/* Profile Photo - BIGGER (w-12 h-12) */}
               <Link href="/settings" className="relative block">
                 {currentUser?.avatar_url ? (
-                  <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-500/30 hover:border-indigo-500 transition-all">
+                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-indigo-500/30 hover:border-indigo-500 transition-all">
                     <img 
                       src={currentUser.avatar_url} 
                       alt="Profile"
@@ -731,7 +746,7 @@ export default function Home() {
                     />
                   </div>
                 ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-white/10 flex items-center justify-center text-sm text-white/40 hover:border-indigo-500/30 transition-all">
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-white/10 flex items-center justify-center text-base text-white/40 hover:border-indigo-500/30 transition-all">
                     {currentUser?.name?.charAt(0) || 'U'}
                   </div>
                 )}
