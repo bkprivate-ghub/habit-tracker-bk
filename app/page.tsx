@@ -77,17 +77,9 @@ export default function Home() {
   // --- AUTO SUBMIT PIN ON 4TH DIGIT ---
   useEffect(() => {
     if (!isSignUp && enteredPin.length === 4) {
-      // Auto-submit after 4th digit
       handleSignIn()
     }
   }, [enteredPin])
-
-  useEffect(() => {
-    if (isSignUp && pin.length === 4) {
-      // Focus on the "Create Account" button after pin is complete
-      // The button will be enabled and user can click it
-    }
-  }, [pin])
 
   const loadAllData = async () => {
     setLoading(true)
@@ -522,7 +514,6 @@ export default function Home() {
 
           <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
             {isSignUp ? (
-              // SIGN UP FORM
               <>
                 <div className="mb-4">
                   <label className="block text-xs text-white/30 mb-1">Your Name</label>
@@ -593,7 +584,6 @@ export default function Home() {
                 </p>
               </>
             ) : (
-              // SIGN IN FORM - Auto-submit after 4th digit
               <>
                 <p className="text-sm text-white/40 text-center mb-4">Enter your 4-digit PIN</p>
                 <div className="flex justify-center gap-3 mb-6">
@@ -609,7 +599,6 @@ export default function Home() {
                         const newPin = enteredPin.split('')
                         newPin[i] = e.target.value.replace(/[^0-9]/, '')
                         setEnteredPin(newPin.join(''))
-                        // Auto-submit happens via useEffect when length === 4
                         if (e.target.value && i < 3) {
                           const nextInput = document.getElementById(`signin-pin-${i + 1}`)
                           if (nextInput) nextInput.focus()
@@ -711,7 +700,7 @@ export default function Home() {
 
       <div className="max-w-md mx-auto relative z-10">
         
-        {/* HEADER with Profile Photo - BIGGER */}
+        {/* HEADER with BIGGER Profile Photo & Icons */}
         <div className="animate-fade-up delay-0">
           <div className="flex justify-between items-start mb-6 pt-2">
             <div>
@@ -735,10 +724,10 @@ export default function Home() {
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Profile Photo - BIGGER (w-12 h-12) */}
+              {/* Profile Photo - MUCH BIGGER (w-14 h-14) */}
               <Link href="/settings" className="relative block">
                 {currentUser?.avatar_url ? (
-                  <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-indigo-500/30 hover:border-indigo-500 transition-all">
+                  <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-indigo-500/30 hover:border-indigo-500 transition-all">
                     <img 
                       src={currentUser.avatar_url} 
                       alt="Profile"
@@ -746,19 +735,20 @@ export default function Home() {
                     />
                   </div>
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-white/10 flex items-center justify-center text-base text-white/40 hover:border-indigo-500/30 transition-all">
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-white/10 flex items-center justify-center text-xl font-bold text-white/40 hover:border-indigo-500/30 transition-all">
                     {currentUser?.name?.charAt(0) || 'U'}
                   </div>
                 )}
               </Link>
               
+              {/* Icons - BIGGER (w-6 h-6) */}
               <div className="flex gap-0.5 bg-black/40 p-1 rounded-xl border border-white/5">
                 <Link 
                   href="/calendar" 
-                  className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
+                  className="p-2 hover:bg-white/5 rounded-lg transition-all"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
                       d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
                     />
@@ -766,10 +756,10 @@ export default function Home() {
                 </Link>
                 <Link 
                   href="/analytics" 
-                  className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
+                  className="p-2 hover:bg-white/5 rounded-lg transition-all"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-6 h-6 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
                       d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
                     />
