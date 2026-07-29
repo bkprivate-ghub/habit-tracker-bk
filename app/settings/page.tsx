@@ -6,53 +6,34 @@ import { supabase } from '../lib/supabase'
 
 export default function Settings() {
   const [habits, setHabits] = useState<any[]>([])
-  const [profile, setProfile] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
-  const [user, setUser] = useState<any>(null)
-  const [hasPin, setHasPin] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     loadData()
-    // Check if PIN is set
-    const pin = localStorage.getItem('habitPin')
-    setHasPin(!!pin)
   }, [])
 
   const loadData = async () => {
     setLoading(true)
     
-    const { data: { user: currentUser } } = await supabase.auth.getUser()
-    setUser(currentUser)
-
-    const { data: habitsData } = await supabase
-      .from('habits')
-      .select('*')
-      .eq('user_id', currentUser?.id || '00000000-0000-0000-0000-000000000000')
-      .order('created_at', { ascending: true })
-    if (habitsData) setHabits(habitsData)
-
-    if (currentUser) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', currentUser.id)
-        .single()
-      
-      if (profileData) {
-        setProfile(profileData)
-      } else {
-        const { data: newProfile } = await supabase
-          .from('profiles')
-          .insert([{ 
-            id: currentUser.id, 
-            full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
-            username: currentUser.user_metadata?.username || currentUser.email?.split('@')[0] || 'user'
-          }])
-          .select()
-          .single()
-        if (newProfile) setProfile(newProfile)
+    // Get current user from localStorage
+    const savedUser = localStorage.getItem('habitUser')
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser)
+        setCurrentUser(user)
+        
+        // Load habits for this user
+        const { data: habitsData } = await supabase
+          .from('habits')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: true })
+        if (habitsData) setHabits(habitsData)
+      } catch (e) {
+        console.error('Error loading user')
       }
     }
     
@@ -89,12 +70,14 @@ export default function Settings() {
       return
     }
 
+    if (!currentUser) {
+      alert('Please log in first')
+      return
+    }
+
     setUploading(true)
 
     try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (!currentUser) throw new Error('No user found')
-
       const fileExt = file.name.split('.').pop()
       const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`
       const filePath = `avatars/${fileName}`
@@ -109,18 +92,18 @@ export default function Settings() {
         .from('avatars')
         .getPublicUrl(filePath)
 
+      // Update user's avatar in users table
       const { error: updateError } = await supabase
-        .from('profiles')
+        .from('users')
         .update({ avatar_url: publicUrl })
         .eq('id', currentUser.id)
 
       if (updateError) throw updateError
 
-      setProfile({ ...profile, avatar_url: publicUrl })
-
-      await supabase.auth.updateUser({
-        data: { avatar_url: publicUrl }
-      })
+      // Update local user
+      const updatedUser = { ...currentUser, avatar_url: publicUrl }
+      localStorage.setItem('habitUser', JSON.stringify(updatedUser))
+      setCurrentUser(updatedUser)
 
       alert('Profile photo updated successfully!')
 
@@ -138,22 +121,19 @@ export default function Settings() {
   const handleRemovePhoto = async () => {
     if (!confirm('Remove your profile photo?')) return
 
-    try {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (!currentUser) throw new Error('No user found')
+    if (!currentUser) return
 
+    try {
       const { error } = await supabase
-        .from('profiles')
+        .from('users')
         .update({ avatar_url: null })
         .eq('id', currentUser.id)
 
       if (error) throw error
 
-      setProfile({ ...profile, avatar_url: null })
-
-      await supabase.auth.updateUser({
-        data: { avatar_url: null }
-      })
+      const updatedUser = { ...currentUser, avatar_url: null }
+      localStorage.setItem('habitUser', JSON.stringify(updatedUser))
+      setCurrentUser(updatedUser)
 
       alert('Photo removed successfully!')
 
@@ -163,41 +143,10 @@ export default function Settings() {
     }
   }
 
-  const handleSetPin = () => {
-    const newPin = prompt('Enter a 4-digit PIN:')
-    if (newPin && newPin.length === 4 && /^\d{4}$/.test(newPin)) {
-      localStorage.setItem('habitPin', newPin)
-      localStorage.setItem('habitPinSet', 'true')
-      setHasPin(true)
-      alert('PIN set successfully!')
-    } else if (newPin) {
-      alert('PIN must be exactly 4 digits')
-    }
-  }
-
-  const handleChangePin = () => {
-    const currentPin = prompt('Enter your current PIN:')
-    const savedPin = localStorage.getItem('habitPin')
-    
-    if (currentPin === savedPin) {
-      const newPin = prompt('Enter new 4-digit PIN:')
-      if (newPin && newPin.length === 4 && /^\d{4}$/.test(newPin)) {
-        localStorage.setItem('habitPin', newPin)
-        alert('PIN updated successfully!')
-      } else if (newPin) {
-        alert('PIN must be exactly 4 digits')
-      }
-    } else {
-      alert('Incorrect PIN')
-    }
-  }
-
-  const handleRemovePin = () => {
-    if (confirm('Remove PIN protection? Everyone can access the app.')) {
-      localStorage.removeItem('habitPin')
-      localStorage.removeItem('habitPinSet')
-      setHasPin(false)
-      alert('PIN removed!')
+  const handleSignOut = () => {
+    if (confirm('Are you sure you want to sign out?')) {
+      localStorage.removeItem('habitUser')
+      window.location.reload()
     }
   }
 
@@ -240,15 +189,15 @@ export default function Settings() {
                 className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white/10 hover:border-indigo-500/50 transition-all duration-300 focus:outline-none"
                 disabled={uploading}
               >
-                {profile?.avatar_url ? (
+                {currentUser?.avatar_url ? (
                   <img 
-                    src={profile.avatar_url} 
+                    src={currentUser.avatar_url} 
                     alt="Profile"
                     className="w-full h-full object-cover"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-4xl text-white/20">
-                    {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                    {currentUser?.name?.charAt(0) || 'U'}
                   </div>
                 )}
                 
@@ -270,10 +219,10 @@ export default function Settings() {
 
             <div>
               <h3 className="text-lg font-semibold text-white/90">
-                {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                {currentUser?.name || 'User'}
               </h3>
-              <p className="text-sm text-white/30">{user?.email}</p>
-              <p className="text-xs text-white/20 mt-1">Member since July 31, 2026</p>
+              <p className="text-sm text-white/30">PIN: ••••</p>
+              <p className="text-xs text-white/20 mt-1">Member since {new Date(currentUser?.created_at).toLocaleDateString()}</p>
               <div className="flex gap-3 mt-1">
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -282,7 +231,7 @@ export default function Settings() {
                 >
                   {uploading ? 'Uploading...' : 'Upload Photo'}
                 </button>
-                {profile?.avatar_url && (
+                {currentUser?.avatar_url && (
                   <>
                     <span className="text-white/10">|</span>
                     <button
@@ -327,51 +276,17 @@ export default function Settings() {
           )}
         </div>
 
-        {/* Security - PIN Settings */}
-        <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
-          <h2 className="text-sm font-semibold text-white/40 mb-3">🔐 Security</h2>
-          
-          {!hasPin ? (
-            <button
-              onClick={handleSetPin}
-              className="w-full py-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 rounded-lg text-sm transition-all"
-            >
-              Set PIN
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={handleChangePin}
-                className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg text-sm transition-all"
-              >
-                Change PIN
-              </button>
-              <button
-                onClick={handleRemovePin}
-                className="w-full mt-2 py-2.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg text-sm transition-all"
-              >
-                Remove PIN
-              </button>
-            </>
-          )}
-        </div>
-
         {/* Account Section */}
         <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5">
           <h2 className="text-sm font-semibold text-white/40 mb-3">Account</h2>
           
           <div className="flex items-center justify-between py-2">
             <span className="text-sm text-white/60">Signed in as</span>
-            <span className="text-sm text-white/30">{user?.email}</span>
+            <span className="text-sm text-white/30">{currentUser?.name}</span>
           </div>
           
           <button
-            onClick={async () => {
-              if (confirm('Are you sure you want to sign out?')) {
-                await supabase.auth.signOut()
-                window.location.href = '/login'
-              }
-            }}
+            onClick={handleSignOut}
             className="w-full mt-3 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl font-medium text-sm transition-all"
           >
             Sign Out
