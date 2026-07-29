@@ -21,6 +21,12 @@ export default function Home() {
   const [currentProgress, setCurrentProgress] = useState(0)
   const [profile, setProfile] = useState<any>(null)
 
+  // --- PIN LOCK STATES ---
+  const [pin, setPin] = useState('')
+  const [enteredPin, setEnteredPin] = useState('')
+  const [isUnlocked, setIsUnlocked] = useState(false)
+  const [isFirstTime, setIsFirstTime] = useState(false)
+
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
   const today = new Date().toISOString().split('T')[0]
 
@@ -34,21 +40,37 @@ export default function Home() {
     { min: 81, max: 100, text: "👑 Legend status. Unstoppable." },
   ]
 
+  // --- PIN LOCK CHECK ---
   useEffect(() => {
-    const hour = new Date().getHours()
-    let g = 'Good Evening'
-    if (hour < 12) g = 'Good Morning'
-    else if (hour < 17) g = 'Good Afternoon'
-    setGreeting(g)
-    loadAllData()
-    loadProfile()
+    const savedPin = localStorage.getItem('habitPin')
+    const pinSet = localStorage.getItem('habitPinSet')
     
-    const timer = setTimeout(() => {
-      setShowSplash(false)
-    }, 1800)
-    
-    return () => clearTimeout(timer)
+    if (savedPin && pinSet === 'true') {
+      setIsUnlocked(false)
+      setIsFirstTime(false)
+    } else {
+      setIsFirstTime(true)
+      setIsUnlocked(false)
+    }
   }, [])
+
+  useEffect(() => {
+    if (isUnlocked) {
+      const hour = new Date().getHours()
+      let g = 'Good Evening'
+      if (hour < 12) g = 'Good Morning'
+      else if (hour < 17) g = 'Good Afternoon'
+      setGreeting(g)
+      loadAllData()
+      loadProfile()
+      
+      const timer = setTimeout(() => {
+        setShowSplash(false)
+      }, 1800)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [isUnlocked])
 
   const loadProfile = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -65,9 +87,12 @@ export default function Home() {
   const loadAllData = async () => {
     setLoading(true)
     
+    const { data: { user } } = await supabase.auth.getUser()
+    
     const { data: habitsData } = await supabase
       .from('habits')
       .select('*')
+      .eq('user_id', user?.id || '00000000-0000-0000-0000-000000000000')
       .order('created_at', { ascending: true })
     
     if (habitsData) {
@@ -81,6 +106,7 @@ export default function Home() {
       const { data: entriesData } = await supabase
         .from('daily_entries')
         .select('*')
+        .eq('user_id', user?.id || '00000000-0000-0000-0000-000000000000')
         .gte('date', thirtyDaysAgoStr)
         .order('date', { ascending: false })
       
@@ -256,6 +282,8 @@ export default function Home() {
   const toggleHabit = async (habitId: string) => {
     setTogglingId(habitId)
     
+    const { data: { user } } = await supabase.auth.getUser()
+    
     const existing = dailyEntries.find((e: any) => e.habit_id === habitId && e.date === today)
     const isDone = existing?.status === 'completed'
     const newStatus = isDone ? 'pending' : 'completed'
@@ -266,7 +294,12 @@ export default function Home() {
     if (existingIndex >= 0) {
       updatedEntries[existingIndex] = { ...updatedEntries[existingIndex], status: newStatus }
     } else {
-      updatedEntries.push({ habit_id: habitId, date: today, status: newStatus })
+      updatedEntries.push({ 
+        habit_id: habitId, 
+        date: today, 
+        status: newStatus,
+        user_id: user?.id || '00000000-0000-0000-0000-000000000000'
+      })
     }
     
     setDailyEntries(updatedEntries)
@@ -308,6 +341,7 @@ export default function Home() {
           habit_id: habitId,
           date: today,
           status: newStatus,
+          user_id: user?.id || '00000000-0000-0000-0000-000000000000',
           completed_at: !isDone ? new Date().toISOString() : null
         })
       
@@ -330,9 +364,15 @@ export default function Home() {
     if (newHabitName.trim() === '') return
     const fullName = `${selectedEmoji} ${newHabitName}`
     
+    const { data: { user } } = await supabase.auth.getUser()
+    
     const { data, error } = await supabase
       .from('habits')
-      .insert([{ name: fullName, done: false }])
+      .insert([{ 
+        name: fullName, 
+        done: false,
+        user_id: user?.id || '00000000-0000-0000-0000-000000000000'
+      }])
       .select()
     
     if (!error && data) {
@@ -362,7 +402,119 @@ export default function Home() {
     day: 'numeric' 
   })
 
-  // Splash Screen
+  // --- PIN LOCK SCREEN ---
+  if (!isUnlocked) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <div className="text-center mb-8">
+            <div className="text-5xl mb-4">🔐</div>
+            <h1 className="text-2xl font-bold text-white/90">HabitTracker</h1>
+            <p className="text-sm text-white/30 mt-1">
+              {isFirstTime ? 'Set up a 4-digit PIN to protect your habits' : 'Enter your PIN to continue'}
+            </p>
+          </div>
+
+          <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
+            {isFirstTime ? (
+              <>
+                <div className="flex justify-center gap-3 mb-6">
+                  {[0, 1, 2, 3].map((i) => (
+                    <input
+                      key={i}
+                      type="password"
+                      maxLength={1}
+                      value={pin[i] || ''}
+                      onChange={(e) => {
+                        const newPin = pin.split('')
+                        newPin[i] = e.target.value.replace(/[^0-9]/, '')
+                        setPin(newPin.join(''))
+                        if (e.target.value && i < 3) {
+                          const nextInput = document.getElementById(`pin-${i + 1}`)
+                          if (nextInput) nextInput.focus()
+                        }
+                      }}
+                      id={`pin-${i}`}
+                      className="w-14 h-14 text-center text-2xl font-bold bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-white"
+                      autoFocus={i === 0}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    if (pin.length === 4) {
+                      localStorage.setItem('habitPin', pin)
+                      localStorage.setItem('habitPinSet', 'true')
+                      setIsUnlocked(true)
+                      setIsFirstTime(false)
+                    } else {
+                      alert('Please enter a 4-digit PIN')
+                    }
+                  }}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all"
+                >
+                  Set PIN
+                </button>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-center gap-3 mb-6">
+                  {[0, 1, 2, 3].map((i) => (
+                    <input
+                      key={i}
+                      type="password"
+                      maxLength={1}
+                      value={enteredPin[i] || ''}
+                      onChange={(e) => {
+                        const newPin = enteredPin.split('')
+                        newPin[i] = e.target.value.replace(/[^0-9]/, '')
+                        setEnteredPin(newPin.join(''))
+                        if (e.target.value && i < 3) {
+                          const nextInput = document.getElementById(`enter-${i + 1}`)
+                          if (nextInput) nextInput.focus()
+                        }
+                      }}
+                      id={`enter-${i}`}
+                      className="w-14 h-14 text-center text-2xl font-bold bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-white"
+                      autoFocus={i === 0}
+                    />
+                  ))}
+                </div>
+                <button
+                  onClick={() => {
+                    const savedPin = localStorage.getItem('habitPin')
+                    if (enteredPin === savedPin) {
+                      setIsUnlocked(true)
+                    } else {
+                      alert('Incorrect PIN')
+                      setEnteredPin('')
+                    }
+                  }}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all"
+                >
+                  Unlock
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm('Reset PIN? This will log everyone out.')) {
+                      localStorage.removeItem('habitPin')
+                      localStorage.removeItem('habitPinSet')
+                      window.location.reload()
+                    }
+                  }}
+                  className="w-full mt-2 py-2 text-xs text-white/20 hover:text-white/40 transition"
+                >
+                  Reset PIN
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // --- SPLASH SCREEN ---
   if (showSplash) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-6">
@@ -411,7 +563,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white p-4 pb-24 relative overflow-hidden">
       
-      {/* Subtle Background Glow */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
 
@@ -441,7 +592,6 @@ export default function Home() {
             </div>
             
             <div className="flex items-center gap-2">
-              {/* Profile Photo - Click to go to Settings */}
               <Link href="/settings" className="relative block">
                 {profile?.avatar_url ? (
                   <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-500/30 hover:border-indigo-500 transition-all">
@@ -458,7 +608,6 @@ export default function Home() {
                 )}
               </Link>
               
-              {/* Icons */}
               <div className="flex gap-0.5 bg-black/40 p-1 rounded-xl border border-white/5">
                 <Link 
                   href="/calendar" 
