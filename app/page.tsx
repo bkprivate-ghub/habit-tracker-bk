@@ -19,6 +19,7 @@ export default function Home() {
   const [todayStreak, setTodayStreak] = useState(0)
   const [motivationMessage, setMotivationMessage] = useState('')
   const [currentProgress, setCurrentProgress] = useState(0)
+  const [profile, setProfile] = useState<any>(null)
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
   const today = new Date().toISOString().split('T')[0]
@@ -40,6 +41,7 @@ export default function Home() {
     else if (hour < 17) g = 'Good Afternoon'
     setGreeting(g)
     loadAllData()
+    loadProfile()
     
     const timer = setTimeout(() => {
       setShowSplash(false)
@@ -47,6 +49,18 @@ export default function Home() {
     
     return () => clearTimeout(timer)
   }, [])
+
+  const loadProfile = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('id', user.id)
+        .single()
+      if (data) setProfile(data)
+    }
+  }
 
   const loadAllData = async () => {
     setLoading(true)
@@ -403,7 +417,7 @@ export default function Home() {
 
       <div className="max-w-md mx-auto relative z-10">
         
-        {/* HEADER */}
+        {/* HEADER with Profile Photo */}
         <div className="animate-fade-up delay-0">
           <div className="flex justify-between items-start mb-6 pt-2">
             <div>
@@ -426,43 +440,49 @@ export default function Home() {
               </p>
             </div>
             
-            <div className="flex gap-0.5 bg-black/40 p-1 rounded-xl border border-white/5">
-              <Link 
-                href="/calendar" 
-                className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
-                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
-                  />
-                </svg>
+            <div className="flex items-center gap-2">
+              {/* Profile Photo - Click to go to Settings */}
+              <Link href="/settings" className="relative block">
+                {profile?.avatar_url ? (
+                  <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-500/30 hover:border-indigo-500 transition-all">
+                    <img 
+                      src={profile.avatar_url} 
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-white/10 flex items-center justify-center text-sm text-white/40 hover:border-indigo-500/30 transition-all">
+                    BK
+                  </div>
+                )}
               </Link>
-              <Link 
-                href="/analytics" 
-                className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
-                  />
-                </svg>
-              </Link>
-              <Link 
-                href="/settings" 
-                className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
-                    d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" 
-                  />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" 
-                  />
-                </svg>
-              </Link>
+              
+              {/* Icons */}
+              <div className="flex gap-0.5 bg-black/40 p-1 rounded-xl border border-white/5">
+                <Link 
+                  href="/calendar" 
+                  className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" 
+                    />
+                  </svg>
+                </Link>
+                <Link 
+                  href="/analytics" 
+                  className="p-1.5 hover:bg-white/5 rounded-lg transition-all"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <svg className="w-4 h-4 text-white/40 hover:text-white/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} 
+                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
+                    />
+                  </svg>
+                </Link>
+              </div>
             </div>
           </div>
         </div>
