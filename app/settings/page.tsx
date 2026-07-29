@@ -9,6 +9,7 @@ export default function Settings() {
   const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [user, setUser] = useState<any>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -18,6 +19,10 @@ export default function Settings() {
   const loadData = async () => {
     setLoading(true)
     
+    // Get current user
+    const { data: { user: currentUser } } = await supabase.auth.getUser()
+    setUser(currentUser)
+
     // Load habits
     const { data: habitsData } = await supabase
       .from('habits')
@@ -26,12 +31,11 @@ export default function Settings() {
     if (habitsData) setHabits(habitsData)
 
     // Load profile
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
+    if (currentUser) {
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
         .single()
       
       if (profileData) {
@@ -41,9 +45,9 @@ export default function Settings() {
         const { data: newProfile } = await supabase
           .from('profiles')
           .insert([{ 
-            id: user.id, 
-            full_name: user.user_metadata?.full_name || 'Bharath K',
-            username: user.user_metadata?.username || 'bharathk'
+            id: currentUser.id, 
+            full_name: currentUser.user_metadata?.full_name || currentUser.email?.split('@')[0] || 'User',
+            username: currentUser.user_metadata?.username || currentUser.email?.split('@')[0] || 'user'
           }])
           .select()
           .single()
@@ -87,11 +91,11 @@ export default function Settings() {
     setUploading(true)
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) throw new Error('No user found. Please log in.')
 
       const fileExt = file.name.split('.').pop()
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+      const fileName = `${currentUser.id}-${Date.now()}.${fileExt}`
       const filePath = `avatars/${fileName}`
 
       const { error: uploadError } = await supabase.storage
@@ -107,7 +111,7 @@ export default function Settings() {
       const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: publicUrl })
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
 
       if (updateError) throw updateError
 
@@ -134,13 +138,13 @@ export default function Settings() {
     if (!confirm('Remove your profile photo?')) return
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error('No user')
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      if (!currentUser) throw new Error('No user found')
 
       const { error } = await supabase
         .from('profiles')
         .update({ avatar_url: null })
-        .eq('id', user.id)
+        .eq('id', currentUser.id)
 
       if (error) throw error
 
@@ -155,6 +159,13 @@ export default function Settings() {
     } catch (error: any) {
       console.error('Remove error:', error)
       alert('Error removing photo: ' + error.message)
+    }
+  }
+
+  const handleLogout = async () => {
+    if (confirm('Are you sure you want to sign out?')) {
+      await supabase.auth.signOut()
+      window.location.href = '/login'
     }
   }
 
@@ -205,7 +216,7 @@ export default function Settings() {
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-4xl text-white/20">
-                    {profile?.full_name?.charAt(0) || 'B'}
+                    {profile?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
                   </div>
                 )}
                 
@@ -227,9 +238,10 @@ export default function Settings() {
 
             <div>
               <h3 className="text-lg font-semibold text-white/90">
-                {profile?.full_name || 'Bharath K'}
+                {profile?.full_name || user?.email?.split('@')[0] || 'User'}
               </h3>
-              <p className="text-sm text-white/30">Member since July 31, 2026</p>
+              <p className="text-sm text-white/30">{user?.email}</p>
+              <p className="text-xs text-white/20 mt-1">Member since July 31, 2026</p>
               <div className="flex gap-3 mt-1">
                 <button
                   onClick={() => fileInputRef.current?.click()}
@@ -262,7 +274,7 @@ export default function Settings() {
         </div>
 
         {/* Manage Habits */}
-        <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5">
+        <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
           <h2 className="text-sm font-semibold text-white/40 mb-3">Manage Habits</h2>
           <p className="text-xs text-white/20 mb-4">Delete habits you no longer track</p>
           
@@ -281,6 +293,23 @@ export default function Settings() {
               </div>
             ))
           )}
+        </div>
+
+        {/* Account Section */}
+        <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5">
+          <h2 className="text-sm font-semibold text-white/40 mb-3">Account</h2>
+          
+          <div className="flex items-center justify-between py-2">
+            <span className="text-sm text-white/60">Signed in as</span>
+            <span className="text-sm text-white/30">{user?.email}</span>
+          </div>
+          
+          <button
+            onClick={handleLogout}
+            className="w-full mt-3 py-3 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-xl font-medium text-sm transition-all"
+          >
+            Sign Out
+          </button>
         </div>
 
       </div>
