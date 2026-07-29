@@ -19,13 +19,16 @@ export default function Home() {
   const [todayStreak, setTodayStreak] = useState(0)
   const [motivationMessage, setMotivationMessage] = useState('')
   const [currentProgress, setCurrentProgress] = useState(0)
-  const [profile, setProfile] = useState<any>(null)
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
-  // --- PIN LOCK STATES ---
+  // --- PIN AUTH STATES ---
   const [pin, setPin] = useState('')
   const [enteredPin, setEnteredPin] = useState('')
   const [isUnlocked, setIsUnlocked] = useState(false)
-  const [isFirstTime, setIsFirstTime] = useState(false)
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [name, setName] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [authLoading, setAuthLoading] = useState(false)
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
   const today = new Date().toISOString().split('T')[0]
@@ -40,29 +43,28 @@ export default function Home() {
     { min: 81, max: 100, text: "👑 Legend status. Unstoppable." },
   ]
 
-  // --- PIN LOCK CHECK ---
+  // --- CHECK FOR SAVED USER ---
   useEffect(() => {
-    const savedPin = localStorage.getItem('habitPin')
-    const pinSet = localStorage.getItem('habitPinSet')
-    
-    if (savedPin && pinSet === 'true') {
-      setIsUnlocked(false)
-      setIsFirstTime(false)
-    } else {
-      setIsFirstTime(true)
-      setIsUnlocked(false)
+    const savedUser = localStorage.getItem('habitUser')
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser)
+        setCurrentUser(user)
+        setIsUnlocked(true)
+      } catch (e) {
+        localStorage.removeItem('habitUser')
+      }
     }
   }, [])
 
   useEffect(() => {
-    if (isUnlocked) {
+    if (isUnlocked && currentUser) {
       const hour = new Date().getHours()
       let g = 'Good Evening'
       if (hour < 12) g = 'Good Morning'
       else if (hour < 17) g = 'Good Afternoon'
       setGreeting(g)
       loadAllData()
-      loadProfile()
       
       const timer = setTimeout(() => {
         setShowSplash(false)
@@ -70,29 +72,20 @@ export default function Home() {
       
       return () => clearTimeout(timer)
     }
-  }, [isUnlocked])
-
-  const loadProfile = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      const { data } = await supabase
-        .from('profiles')
-        .select('avatar_url')
-        .eq('id', user.id)
-        .single()
-      if (data) setProfile(data)
-    }
-  }
+  }, [isUnlocked, currentUser])
 
   const loadAllData = async () => {
     setLoading(true)
     
-    const { data: { user } } = await supabase.auth.getUser()
+    if (!currentUser) {
+      setLoading(false)
+      return
+    }
     
     const { data: habitsData } = await supabase
       .from('habits')
       .select('*')
-      .eq('user_id', user?.id || '00000000-0000-0000-0000-000000000000')
+      .eq('user_id', currentUser.id)
       .order('created_at', { ascending: true })
     
     if (habitsData) {
@@ -106,7 +99,7 @@ export default function Home() {
       const { data: entriesData } = await supabase
         .from('daily_entries')
         .select('*')
-        .eq('user_id', user?.id || '00000000-0000-0000-0000-000000000000')
+        .eq('user_id', currentUser.id)
         .gte('date', thirtyDaysAgoStr)
         .order('date', { ascending: false })
       
@@ -115,6 +108,92 @@ export default function Home() {
     }
     
     setLoading(false)
+  }
+
+  // --- PIN AUTH FUNCTIONS ---
+  const handleSignUp = async () => {
+    if (!name.trim() || pin.length !== 4) {
+      setAuthError('Please enter a name and a 4-digit PIN')
+      return
+    }
+
+    setAuthLoading(true)
+    setAuthError('')
+
+    try {
+      // Check if PIN already exists
+      const { data: existingUser, error: checkError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('pin', pin)
+        .single()
+
+      if (existingUser) {
+        setAuthError('This PIN is already taken. Please choose another.')
+        setAuthLoading(false)
+        return
+      }
+
+      // Create new user
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert([{ name: name.trim(), pin: pin }])
+        .select()
+        .single()
+
+      if (insertError) throw insertError
+
+      if (newUser) {
+        localStorage.setItem('habitUser', JSON.stringify(newUser))
+        setCurrentUser(newUser)
+        setIsUnlocked(true)
+      }
+    } catch (error: any) {
+      setAuthError(error.message || 'Error creating account')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const handleSignIn = async () => {
+    if (enteredPin.length !== 4) {
+      setAuthError('Please enter your 4-digit PIN')
+      return
+    }
+
+    setAuthLoading(true)
+    setAuthError('')
+
+    try {
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('pin', enteredPin)
+        .single()
+
+      if (error) throw error
+
+      if (user) {
+        localStorage.setItem('habitUser', JSON.stringify(user))
+        setCurrentUser(user)
+        setIsUnlocked(true)
+      } else {
+        setAuthError('Invalid PIN')
+      }
+    } catch (error: any) {
+      setAuthError('Invalid PIN or user not found')
+    } finally {
+      setAuthLoading(false)
+    }
+  }
+
+  const handleSignOut = () => {
+    localStorage.removeItem('habitUser')
+    setCurrentUser(null)
+    setIsUnlocked(false)
+    setEnteredPin('')
+    setPin('')
+    setName('')
   }
 
   const sortHabitsByOrder = (habitsData: any[]) => {
@@ -282,7 +361,7 @@ export default function Home() {
   const toggleHabit = async (habitId: string) => {
     setTogglingId(habitId)
     
-    const { data: { user } } = await supabase.auth.getUser()
+    if (!currentUser) return
     
     const existing = dailyEntries.find((e: any) => e.habit_id === habitId && e.date === today)
     const isDone = existing?.status === 'completed'
@@ -298,7 +377,7 @@ export default function Home() {
         habit_id: habitId, 
         date: today, 
         status: newStatus,
-        user_id: user?.id || '00000000-0000-0000-0000-000000000000'
+        user_id: currentUser.id
       })
     }
     
@@ -341,7 +420,7 @@ export default function Home() {
           habit_id: habitId,
           date: today,
           status: newStatus,
-          user_id: user?.id || '00000000-0000-0000-0000-000000000000',
+          user_id: currentUser.id,
           completed_at: !isDone ? new Date().toISOString() : null
         })
       
@@ -364,14 +443,14 @@ export default function Home() {
     if (newHabitName.trim() === '') return
     const fullName = `${selectedEmoji} ${newHabitName}`
     
-    const { data: { user } } = await supabase.auth.getUser()
+    if (!currentUser) return
     
     const { data, error } = await supabase
       .from('habits')
       .insert([{ 
         name: fullName, 
         done: false,
-        user_id: user?.id || '00000000-0000-0000-0000-000000000000'
+        user_id: currentUser.id
       }])
       .select()
     
@@ -402,7 +481,7 @@ export default function Home() {
     day: 'numeric' 
   })
 
-  // --- PIN LOCK SCREEN ---
+  // --- PIN AUTH SCREEN ---
   if (!isUnlocked) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center p-4">
@@ -411,53 +490,84 @@ export default function Home() {
             <div className="text-5xl mb-4">🔐</div>
             <h1 className="text-2xl font-bold text-white/90">HabitTracker</h1>
             <p className="text-sm text-white/30 mt-1">
-              {isFirstTime ? 'Set up a 4-digit PIN to protect your habits' : 'Enter your PIN to continue'}
+              {isSignUp ? 'Create your account' : 'Enter your PIN to continue'}
             </p>
           </div>
 
           <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-6 border border-white/5">
-            {isFirstTime ? (
+            {isSignUp ? (
+              // SIGN UP FORM
               <>
-                <div className="flex justify-center gap-3 mb-6">
-                  {[0, 1, 2, 3].map((i) => (
-                    <input
-                      key={i}
-                      type="password"
-                      maxLength={1}
-                      value={pin[i] || ''}
-                      onChange={(e) => {
-                        const newPin = pin.split('')
-                        newPin[i] = e.target.value.replace(/[^0-9]/, '')
-                        setPin(newPin.join(''))
-                        if (e.target.value && i < 3) {
-                          const nextInput = document.getElementById(`pin-${i + 1}`)
-                          if (nextInput) nextInput.focus()
-                        }
-                      }}
-                      id={`pin-${i}`}
-                      className="w-14 h-14 text-center text-2xl font-bold bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-white"
-                      autoFocus={i === 0}
-                    />
-                  ))}
+                <div className="mb-4">
+                  <label className="block text-xs text-white/30 mb-1">Your Name</label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full p-3 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-white placeholder:text-white/20 text-sm"
+                    placeholder="Enter your name"
+                  />
                 </div>
+                
+                <div className="mb-4">
+                  <label className="block text-xs text-white/30 mb-1">Set 4-Digit PIN</label>
+                  <div className="flex justify-center gap-3">
+                    {[0, 1, 2, 3].map((i) => (
+                      <input
+                        key={i}
+                        type="password"
+                        maxLength={1}
+                        value={pin[i] || ''}
+                        onChange={(e) => {
+                          const newPin = pin.split('')
+                          newPin[i] = e.target.value.replace(/[^0-9]/, '')
+                          setPin(newPin.join(''))
+                          if (e.target.value && i < 3) {
+                            const nextInput = document.getElementById(`signup-pin-${i + 1}`)
+                            if (nextInput) nextInput.focus()
+                          }
+                        }}
+                        id={`signup-pin-${i}`}
+                        className="w-14 h-14 text-center text-2xl font-bold bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-white"
+                        autoFocus={i === 0}
+                      />
+                    ))}
+                  </div>
+                </div>
+
+                {authError && (
+                  <div className="text-sm text-rose-400 bg-rose-500/10 p-3 rounded-lg mb-4">
+                    {authError}
+                  </div>
+                )}
+
                 <button
-                  onClick={() => {
-                    if (pin.length === 4) {
-                      localStorage.setItem('habitPin', pin)
-                      localStorage.setItem('habitPinSet', 'true')
-                      setIsUnlocked(true)
-                      setIsFirstTime(false)
-                    } else {
-                      alert('Please enter a 4-digit PIN')
-                    }
-                  }}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all"
+                  onClick={handleSignUp}
+                  disabled={authLoading}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all disabled:opacity-50"
                 >
-                  Set PIN
+                  {authLoading ? 'Creating...' : 'Create Account'}
                 </button>
+
+                <p className="text-center text-xs text-white/20 mt-4">
+                  Already have an account?{' '}
+                  <button
+                    onClick={() => {
+                      setIsSignUp(false)
+                      setAuthError('')
+                      setPin('')
+                      setName('')
+                    }}
+                    className="text-indigo-400 hover:text-indigo-300 transition"
+                  >
+                    Sign In
+                  </button>
+                </p>
               </>
             ) : (
+              // SIGN IN FORM
               <>
+                <p className="text-sm text-white/40 text-center mb-4">Enter your 4-digit PIN</p>
                 <div className="flex justify-center gap-3 mb-6">
                   {[0, 1, 2, 3].map((i) => (
                     <input
@@ -470,42 +580,44 @@ export default function Home() {
                         newPin[i] = e.target.value.replace(/[^0-9]/, '')
                         setEnteredPin(newPin.join(''))
                         if (e.target.value && i < 3) {
-                          const nextInput = document.getElementById(`enter-${i + 1}`)
+                          const nextInput = document.getElementById(`signin-pin-${i + 1}`)
                           if (nextInput) nextInput.focus()
                         }
                       }}
-                      id={`enter-${i}`}
+                      id={`signin-pin-${i}`}
                       className="w-14 h-14 text-center text-2xl font-bold bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-white"
                       autoFocus={i === 0}
                     />
                   ))}
                 </div>
+
+                {authError && (
+                  <div className="text-sm text-rose-400 bg-rose-500/10 p-3 rounded-lg mb-4">
+                    {authError}
+                  </div>
+                )}
+
                 <button
-                  onClick={() => {
-                    const savedPin = localStorage.getItem('habitPin')
-                    if (enteredPin === savedPin) {
-                      setIsUnlocked(true)
-                    } else {
-                      alert('Incorrect PIN')
+                  onClick={handleSignIn}
+                  disabled={authLoading}
+                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all disabled:opacity-50"
+                >
+                  {authLoading ? 'Signing in...' : 'Sign In'}
+                </button>
+
+                <p className="text-center text-xs text-white/20 mt-4">
+                  Don't have an account?{' '}
+                  <button
+                    onClick={() => {
+                      setIsSignUp(true)
+                      setAuthError('')
                       setEnteredPin('')
-                    }
-                  }}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all"
-                >
-                  Unlock
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm('Reset PIN? This will log everyone out.')) {
-                      localStorage.removeItem('habitPin')
-                      localStorage.removeItem('habitPinSet')
-                      window.location.reload()
-                    }
-                  }}
-                  className="w-full mt-2 py-2 text-xs text-white/20 hover:text-white/40 transition"
-                >
-                  Reset PIN
-                </button>
+                    }}
+                    className="text-indigo-400 hover:text-indigo-300 transition"
+                  >
+                    Sign Up
+                  </button>
+                </p>
               </>
             )}
           </div>
@@ -530,7 +642,7 @@ export default function Home() {
             {greeting}
           </div>
           <h1 className="text-3xl font-bold text-white/90 tracking-tight">
-            Bharath K
+            {currentUser?.name || 'User'}
           </h1>
           <p className="text-sm text-white/30 mt-3 font-light tracking-wide animate-pulse">
             Loading your habits...
@@ -568,7 +680,7 @@ export default function Home() {
 
       <div className="max-w-md mx-auto relative z-10">
         
-        {/* HEADER with Profile Photo */}
+        {/* HEADER with Profile */}
         <div className="animate-fade-up delay-0">
           <div className="flex justify-between items-start mb-6 pt-2">
             <div>
@@ -584,7 +696,7 @@ export default function Home() {
                 <span className="text-xs text-indigo-400/40 animate-pulse">●</span>
               </div>
               <h1 className="text-2xl font-bold text-white/90 tracking-tight">
-                Bharath K
+                {currentUser?.name || 'User'}
               </h1>
               <p className="text-xs text-white/30 mt-0.5 font-light">
                 {dateDisplay}
@@ -593,17 +705,17 @@ export default function Home() {
             
             <div className="flex items-center gap-2">
               <Link href="/settings" className="relative block">
-                {profile?.avatar_url ? (
+                {currentUser?.avatar_url ? (
                   <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-indigo-500/30 hover:border-indigo-500 transition-all">
                     <img 
-                      src={profile.avatar_url} 
+                      src={currentUser.avatar_url} 
                       alt="Profile"
                       className="w-full h-full object-cover"
                     />
                   </div>
                 ) : (
                   <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border-2 border-white/10 flex items-center justify-center text-sm text-white/40 hover:border-indigo-500/30 transition-all">
-                    BK
+                    {currentUser?.name?.charAt(0) || 'U'}
                   </div>
                 )}
               </Link>
@@ -841,9 +953,15 @@ export default function Home() {
           )}
         </div>
 
-        {/* Footer */}
+        {/* Footer with Sign Out */}
         <div className="mt-6 text-center">
-          <p className="text-[8px] text-white/20 tracking-widest font-light">
+          <button
+            onClick={handleSignOut}
+            className="text-[8px] text-white/20 hover:text-white/40 transition tracking-widest font-light"
+          >
+            SIGN OUT
+          </button>
+          <p className="text-[8px] text-white/10 tracking-widest font-light mt-1">
             STAY DISCIPLINED · STAY FOCUSED
           </p>
         </div>
