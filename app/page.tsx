@@ -194,6 +194,7 @@ export default function Home() {
     setEnteredPin('')
     setPin('')
     setName('')
+    window.location.reload()
   }
 
   const sortHabitsByOrder = (habitsData: any[]) => {
@@ -361,7 +362,10 @@ export default function Home() {
   const toggleHabit = async (habitId: string) => {
     setTogglingId(habitId)
     
-    if (!currentUser) return
+    if (!currentUser) {
+      setTogglingId(null)
+      return
+    }
     
     const existing = dailyEntries.find((e: any) => e.habit_id === habitId && e.date === today)
     const isDone = existing?.status === 'completed'
@@ -443,7 +447,10 @@ export default function Home() {
     if (newHabitName.trim() === '') return
     const fullName = `${selectedEmoji} ${newHabitName}`
     
-    if (!currentUser) return
+    if (!currentUser) {
+      alert('Please log in to add habits')
+      return
+    }
     
     const { data, error } = await supabase
       .from('habits')
@@ -454,7 +461,13 @@ export default function Home() {
       }])
       .select()
     
-    if (!error && data) {
+    if (error) {
+      console.error('Error adding habit:', error)
+      alert('Error adding habit: ' + error.message)
+      return
+    }
+    
+    if (data) {
       const updatedHabits = [...habits, data[0]]
       const sortedHabits = sortHabitsByOrder(updatedHabits)
       setHabits(sortedHabits)
@@ -517,6 +530,8 @@ export default function Home() {
                         key={i}
                         type="password"
                         maxLength={1}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         value={pin[i] || ''}
                         onChange={(e) => {
                           const newPin = pin.split('')
@@ -574,6 +589,8 @@ export default function Home() {
                       key={i}
                       type="password"
                       maxLength={1}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       value={enteredPin[i] || ''}
                       onChange={(e) => {
                         const newPin = enteredPin.split('')
