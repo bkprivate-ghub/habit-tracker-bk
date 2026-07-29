@@ -18,14 +18,12 @@ export default function Settings() {
   const loadData = async () => {
     setLoading(true)
     
-    // Get current user from localStorage
     const savedUser = localStorage.getItem('habitUser')
     if (savedUser) {
       try {
         const user = JSON.parse(savedUser)
         setCurrentUser(user)
         
-        // Load habits for this user
         const { data: habitsData } = await supabase
           .from('habits')
           .select('*')
@@ -92,7 +90,6 @@ export default function Settings() {
         .from('avatars')
         .getPublicUrl(filePath)
 
-      // Update user's avatar in users table
       const { error: updateError } = await supabase
         .from('users')
         .update({ avatar_url: publicUrl })
@@ -100,7 +97,6 @@ export default function Settings() {
 
       if (updateError) throw updateError
 
-      // Update local user
       const updatedUser = { ...currentUser, avatar_url: publicUrl }
       localStorage.setItem('habitUser', JSON.stringify(updatedUser))
       setCurrentUser(updatedUser)
@@ -146,7 +142,8 @@ export default function Settings() {
   const handleSignOut = () => {
     if (confirm('Are you sure you want to sign out?')) {
       localStorage.removeItem('habitUser')
-      window.location.reload()
+      // Redirect to PIN entry page
+      window.location.href = '/'
     }
   }
 
@@ -222,7 +219,7 @@ export default function Settings() {
                 {currentUser?.name || 'User'}
               </h3>
               <p className="text-sm text-white/30">PIN: ••••</p>
-              <p className="text-xs text-white/20 mt-1">Member since {new Date(currentUser?.created_at).toLocaleDateString()}</p>
+              <p className="text-xs text-white/20 mt-1">Member since {currentUser?.created_at ? new Date(currentUser.created_at).toLocaleDateString() : 'Today'}</p>
               <div className="flex gap-3 mt-1">
                 <button
                   onClick={() => fileInputRef.current?.click()}
