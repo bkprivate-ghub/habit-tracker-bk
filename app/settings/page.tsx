@@ -1,22 +1,57 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 
 export default function Settings() {
   const [habits, setHabits] = useState<any[]>([])
+  const [profile, setProfile] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    loadHabits()
+    loadData()
   }, [])
 
-  const loadHabits = async () => {
-    const { data } = await supabase
+  const loadData = async () => {
+    setLoading(true)
+    
+    // Load habits
+    const { data: habitsData } = await supabase
       .from('habits')
       .select('*')
       .order('created_at', { ascending: true })
-    if (data) setHabits(data)
+    if (habitsData) setHabits(habitsData)
+
+    // Load profile
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+      
+      if (profileData) {
+        setProfile(profileData)
+      } else {
+        // Create profile if doesn't exist
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .insert([{ 
+            id: user.id, 
+            full_name: user.user_metadata?.full_name || 'Bharath K',
+            username: user.user_metadata?.username || 'bharathk'
+          }])
+          .select()
+          .single()
+        if (newProfile) setProfile(newProfile)
+      }
+    }
+    
+    setLoading(false)
   }
 
   const deleteHabit = async (id: string) => {
@@ -31,80 +66,221 @@ export default function Settings() {
         .delete()
         .eq('id', id)
       
-      loadHabits()
+      loadData()
     }
   }
 
-  if (habits.length === 0) {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please upload an image file')
+      return
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Image must be less than 2MB')
+      return
+    }
+
+    setUploading(true)
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No user')
+
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`
+      const filePath = `avatars/${fileName}`
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file)
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath)
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id)
+
+      if (updateError) throw updateError
+
+      setProfile({ ...profile, avatar_url: publicUrl })
+
+      await supabase.auth.updateUser({
+        data: { avatar_url: publicUrl }
+      })
+
+      alert('Profile photo updated successfully!')
+
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      alert('Error uploading image: ' + error.message)
+    } finally {
+      setUploading(false)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
+
+  const handleRemovePhoto = async () => {
+    if (!confirm('Remove your profile photo?')) return
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('No user')
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({ avatar_url: null })
+        .eq('id', user.id)
+
+      if (error) throw error
+
+      setProfile({ ...profile, avatar_url: null })
+
+      await supabase.auth.updateUser({
+        data: { avatar_url: null }
+      })
+
+      alert('Photo removed successfully!')
+
+    } catch (error: any) {
+      console.error('Remove error:', error)
+      alert('Error removing photo: ' + error.message)
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
-          <div className="text-4xl mb-4 animate-pulse text-gray-600 dark:text-gray-300">◆</div>
-          <p className="text-gray-500 dark:text-gray-400 font-light">Loading settings...</p>
+          <div className="text-4xl mb-4 animate-pulse text-indigo-400">⚙️</div>
+          <p className="text-white/40 font-light">Loading settings...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 pb-20">
-      <div className="max-w-md mx-auto">
+    <div className="min-h-screen bg-black text-white p-4 pb-20 relative overflow-hidden">
+      
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl" />
+      <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
+
+      <div className="max-w-md mx-auto relative z-10">
         
         <div className="flex justify-between items-center mb-6">
           <div>
-            <Link href="/" className="text-indigo-600 dark:text-indigo-400 text-sm mb-1 inline-block hover:text-indigo-700 dark:hover:text-indigo-300 transition">
+            <Link href="/" className="text-indigo-400 hover:text-indigo-300 text-sm mb-1 inline-block transition-all">
               ← Back to Dashboard
             </Link>
-            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">⚙️ Settings</h1>
+            <h1 className="text-2xl font-bold text-white/90">⚙️ Settings</h1>
           </div>
         </div>
 
-        {/* Profile Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
+        {/* Profile Card with Photo Upload */}
+        <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-6 border border-white/5 mb-4">
+          <h2 className="text-sm font-semibold text-white/40 mb-4">Profile</h2>
+          
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-2xl text-white font-bold">
-              BK
+            <div className="relative group">
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-white/10 hover:border-indigo-500/50 transition-all duration-300 focus:outline-none"
+                disabled={uploading}
+              >
+                {profile?.avatar_url ? (
+                  <img 
+                    src={profile.avatar_url} 
+                    alt="Profile"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20 flex items-center justify-center text-4xl text-white/20">
+                    {profile?.full_name?.charAt(0) || 'B'}
+                  </div>
+                )}
+                
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <span className="text-white text-xs font-medium">
+                    {uploading ? '⏳' : '📷'}
+                  </span>
+                </div>
+              </button>
+              
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
             </div>
+
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Bharath K</h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">Member since July 31, 2026</p>
+              <h3 className="text-lg font-semibold text-white/90">
+                {profile?.full_name || 'Bharath K'}
+              </h3>
+              <p className="text-sm text-white/30">Member since July 31, 2026</p>
+              <div className="flex gap-3 mt-1">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-xs text-indigo-400 hover:text-indigo-300 transition"
+                  disabled={uploading}
+                >
+                  {uploading ? 'Uploading...' : 'Upload Photo'}
+                </button>
+                {profile?.avatar_url && (
+                  <>
+                    <span className="text-white/10">|</span>
+                    <button
+                      onClick={handleRemovePhoto}
+                      className="text-xs text-rose-400 hover:text-rose-300 transition"
+                    >
+                      Remove
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
+          
+          {uploading && (
+            <div className="mt-3 flex items-center gap-2">
+              <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+              <span className="text-xs text-white/30">Uploading image...</span>
+            </div>
+          )}
         </div>
 
         {/* Manage Habits */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700 mb-4">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">Manage Habits</h2>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mb-4">Delete habits you no longer track</p>
+        <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5">
+          <h2 className="text-sm font-semibold text-white/40 mb-3">Manage Habits</h2>
+          <p className="text-xs text-white/20 mb-4">Delete habits you no longer track</p>
           
-          {habits.map((habit: any) => (
-            <div key={habit.id} className="flex items-center justify-between py-3 border-b border-gray-100 dark:border-gray-700 last:border-0">
-              <span className="text-gray-700 dark:text-gray-300">{habit.name}</span>
-              <button
-                onClick={() => deleteHabit(habit.id)}
-                className="text-rose-500 dark:text-rose-400 text-sm px-3 py-1 rounded-lg bg-rose-50 dark:bg-rose-900/20 hover:bg-rose-100 dark:hover:bg-rose-900/30 transition"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* Stats Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm dark:shadow-gray-800/30 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 mb-3">📊 Your Stats</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 text-center">
-              <div className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{habits.length}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Total Habits</div>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-900/50 rounded-xl p-3 text-center">
-              <div className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                {habits.filter((h: any) => h.done).length}
+          {habits.length === 0 ? (
+            <p className="text-sm text-white/20 py-4 text-center">No habits added yet</p>
+          ) : (
+            habits.map((habit) => (
+              <div key={habit.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0">
+                <span className="text-sm text-white/70">{habit.name}</span>
+                <button
+                  onClick={() => deleteHabit(habit.id)}
+                  className="text-rose-400 hover:text-rose-300 text-sm px-3 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 transition"
+                >
+                  Delete
+                </button>
               </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">Completed Today</div>
-            </div>
-          </div>
+            ))
+          )}
         </div>
 
       </div>
