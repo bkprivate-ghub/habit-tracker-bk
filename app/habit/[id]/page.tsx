@@ -21,13 +21,14 @@ export default function HabitDetail() {
     totalCompletions: 0,
     totalDays: 0,
     weeklyData: [] as { day: string; date: string; completed: boolean }[],
-    monthlyData: [] as { day: number; date: string; completed: boolean; isToday: boolean; isFuture: boolean }[],
+    monthlyData: [] as { day: number; date: string; completed: boolean; isToday: boolean; isFuture: boolean; isBeforeCreation: boolean }[],
   })
   const [showEdit, setShowEdit] = useState(false)
   const [editName, setEditName] = useState('')
   const [editEmoji, setEditEmoji] = useState('')
   const [monthOffset, setMonthOffset] = useState(0)
   const [currentMonthLabel, setCurrentMonthLabel] = useState('')
+  const [habitCreatedDate, setHabitCreatedDate] = useState('')
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
 
@@ -67,6 +68,7 @@ export default function HabitDetail() {
     }
 
     setHabit(habitData)
+    setHabitCreatedDate(habitData.created_at)
     const nameParts = habitData.name.split(' ')
     const emoji = nameParts[0] || '📚'
     const name = nameParts.slice(1).join(' ')
@@ -88,6 +90,7 @@ export default function HabitDetail() {
 
   const calculateStats = (habitData: any, entriesData: any[]) => {
     const createdDate = new Date(habitData.created_at)
+    const createdDateStr = createdDate.toISOString().split('T')[0]
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
 
@@ -145,6 +148,7 @@ export default function HabitDetail() {
     }
     bestStreak = Math.max(bestStreak, tempStreak)
 
+    // Weekly data (last 7 days)
     const weeklyData = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
@@ -158,6 +162,7 @@ export default function HabitDetail() {
       })
     }
 
+    // Monthly data with offset
     const monthData = []
     const todayDate = new Date()
     const targetMonth = todayDate.getMonth() + monthOffset
@@ -171,12 +176,14 @@ export default function HabitDetail() {
       const date = new Date(targetYear, targetMonth, d)
       const dateStr = date.toISOString().split('T')[0]
       const entry = entriesData.find(e => e.date === dateStr)
+      const isBeforeCreation = dateStr < createdDateStr
       monthData.push({
         day: d,
         date: dateStr,
         completed: entry?.status === 'completed' || false,
         isToday: dateStr === todayStr,
         isFuture: date > new Date(),
+        isBeforeCreation: isBeforeCreation,
       })
     }
 
@@ -227,6 +234,20 @@ export default function HabitDetail() {
 
   const changeMonth = (delta: number) => {
     setMonthOffset(monthOffset + delta)
+  }
+
+  // Function to get color for monthly view
+  const getMonthlyColor = (day: any) => {
+    if (day.isBeforeCreation) {
+      return 'bg-white/5 text-white/20' // Grey for days before creation
+    }
+    if (day.isFuture) {
+      return 'text-white/40' // White for future days
+    }
+    if (day.completed) {
+      return 'bg-emerald-500/30 text-emerald-400 border border-emerald-500/50' // Bright green for done
+    }
+    return 'bg-rose-500/20 text-rose-400 border border-rose-500/30' // Bright red for missed
   }
 
   if (loading) {
@@ -371,7 +392,7 @@ export default function HabitDetail() {
           </div>
         </div>
 
-        {/* Monthly Calendar View */}
+        {/* Monthly Calendar View - FIXED COLORS */}
         <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs text-white/30 font-medium">📅 Monthly View</h3>
@@ -393,22 +414,32 @@ export default function HabitDetail() {
           </div>
           <div className="grid grid-cols-7 gap-1">
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, i) => (
-              <div key={i} className="text-center text-[8px] text-white/20 py-1">
+              <div key={i} className="text-center text-[8px] text-white/30 py-1">
                 {day}
               </div>
             ))}
             {stats.monthlyData.map((day, i) => (
               <div
                 key={i}
-                className={`aspect-square rounded-lg flex items-center justify-center text-xs transition-all
-                  ${day.completed ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-white/20'}
-                  ${day.isToday ? 'ring-1 ring-indigo-400' : ''}
-                  ${day.isFuture ? 'opacity-30' : ''}
-                `}
+                className={`aspect-square rounded-lg flex items-center justify-center text-xs transition-all font-medium ${getMonthlyColor(day)}`}
               >
                 {day.day}
               </div>
             ))}
+          </div>
+          <div className="flex justify-center gap-4 mt-3 text-[8px] text-white/30">
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Done
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span> Missed
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-white/5"></span> Before Habit
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-white/20"></span> Future
+            </span>
           </div>
         </div>
 
