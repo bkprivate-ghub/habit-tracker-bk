@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { supabase } from '../../lib/supabase'
 
 export default function HabitDetail() {
@@ -145,7 +145,6 @@ export default function HabitDetail() {
     }
     bestStreak = Math.max(bestStreak, tempStreak)
 
-    // Weekly data
     const weeklyData = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
@@ -159,7 +158,6 @@ export default function HabitDetail() {
       })
     }
 
-    // Monthly data with offset
     const monthData = []
     const todayDate = new Date()
     const targetMonth = todayDate.getMonth() + monthOffset
