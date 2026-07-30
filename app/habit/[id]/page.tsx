@@ -20,8 +20,8 @@ export default function HabitDetail() {
     bestStreak: 0,
     totalCompletions: 0,
     totalDays: 0,
-    weeklyData: [] as { day: string; date: string; completed: number; total: number; percentage: number }[],
-    monthlyData: [] as { day: number; date: string; completed: boolean; isToday: boolean; isFuture: boolean; isBeforeCreation: boolean }[],
+    weeklyData: [] as { day: string; date: string; completed: boolean }[],
+    monthlyData: [] as { day: number; date: string; completed: boolean; isToday: boolean; isFuture: boolean; isBeforeCreation: boolean; status: string }[],
   })
   const [showEdit, setShowEdit] = useState(false)
   const [editName, setEditName] = useState('')
@@ -94,7 +94,7 @@ export default function HabitDetail() {
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
 
-    // Total days since creation
+    // Total days since creation (including today)
     let totalDays = 0
     let currentDate = new Date(createdDate)
     currentDate.setHours(0, 0, 0, 0)
@@ -103,8 +103,11 @@ export default function HabitDetail() {
       currentDate.setDate(currentDate.getDate() + 1)
     }
 
+    // Count completions
     const completions = entriesData.filter(e => e.status === 'completed')
     const totalCompletions = completions.length
+    
+    // Consistency = completions / total days since creation
     const consistency = totalDays > 0 ? Math.round((totalCompletions / totalDays) * 100) : 0
 
     // Current streak
@@ -151,7 +154,7 @@ export default function HabitDetail() {
     }
     bestStreak = Math.max(bestStreak, tempStreak)
 
-    // WEEKLY DATA - Similar to Analytics page
+    // WEEKLY DATA - Last 7 days
     const weeklyData = []
     const todayDate = new Date()
     for (let i = 6; i >= 0; i--) {
@@ -159,18 +162,16 @@ export default function HabitDetail() {
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
       const entry = entriesData.find(e => e.date === dateStr)
-      const isCompleted = entry?.status === 'completed' ? 1 : 0
+      const isCompleted = entry?.status === 'completed' || false
       
       weeklyData.push({
         day: date.toLocaleDateString('en-US', { weekday: 'short' }),
         date: dateStr,
         completed: isCompleted,
-        total: 1,
-        percentage: isCompleted * 100,
       })
     }
 
-    // MONTHLY DATA - Similar to Analytics page
+    // MONTHLY DATA
     const monthData = []
     const targetMonth = todayDate.getMonth() + monthOffset
     const targetYear = todayDate.getFullYear()
@@ -186,15 +187,28 @@ export default function HabitDetail() {
       const isBeforeCreation = dateStr < createdDateStr
       const isToday = dateStr === todayStr
       const isFuture = date > new Date()
-      const isCompleted = entry?.status === 'completed'
+      const isCompleted = entry?.status === 'completed' || false
+      
+      // Determine status for color coding
+      let status = 'future'
+      if (isBeforeCreation) {
+        status = 'before'
+      } else if (isFuture) {
+        status = 'future'
+      } else if (isCompleted) {
+        status = 'done'
+      } else {
+        status = 'missed'
+      }
       
       monthData.push({
         day: d,
         date: dateStr,
-        completed: isCompleted || false,
+        completed: isCompleted,
         isToday: isToday,
         isFuture: isFuture,
         isBeforeCreation: isBeforeCreation,
+        status: status,
       })
     }
 
@@ -249,16 +263,19 @@ export default function HabitDetail() {
 
   // Function to get color for monthly view
   const getMonthlyColor = (day: any) => {
-    if (day.isBeforeCreation) {
+    if (day.status === 'before') {
       return 'bg-white/5 text-white/20'
     }
-    if (day.isFuture) {
+    if (day.status === 'future') {
       return 'text-white/30'
     }
-    if (day.completed) {
+    if (day.status === 'done') {
       return 'bg-emerald-500/30 text-emerald-400 border border-emerald-500/50'
     }
-    return 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+    if (day.status === 'missed') {
+      return 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+    }
+    return 'text-white/20'
   }
 
   if (loading) {
@@ -385,14 +402,26 @@ export default function HabitDetail() {
           </div>
         </div>
 
-        {/* WEEKLY CHART - Same as Analytics page */}
+        {/* WEEKLY CHART */}
         <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5 mb-4">
           <h3 className="text-xs text-white/30 font-medium mb-3">📈 Weekly Progress</h3>
           <div className="flex items-end justify-between h-32 gap-1.5">
             {stats.weeklyData.map((day, i) => {
               const isToday = day.date === new Date().toISOString().split('T')[0]
-              const barHeight = day.percentage > 0 ? Math.max(day.percentage, 4) : 4
-              const barColor = day.completed === 1 ? 'bg-emerald-500' : 'bg-white/10'
+              const isCompleted = day.completed
+              
+              // Bar color: Green if done, Red if missed (not done)
+              let barColor = 'bg-white/10'
+              let barHeight = '20%'
+              
+              if (isCompleted) {
+                barColor = 'bg-emerald-500'
+                barHeight = '80%'
+              } else {
+                // Missed day - RED
+                barColor = 'bg-rose-500'
+                barHeight = '40%'
+              }
               
               return (
                 <div key={i} className="flex-1 flex flex-col items-center h-full">
@@ -400,9 +429,10 @@ export default function HabitDetail() {
                     <div
                       className={`w-full rounded-t-lg transition-all duration-300 ${barColor}`}
                       style={{
-                        height: `${barHeight}%`,
+                        height: barHeight,
                         minHeight: '4px',
-                        boxShadow: isToday && day.completed === 1 ? '0 0 20px rgba(16, 185, 129, 0.4)' : 'none'
+                        boxShadow: isToday && isCompleted ? '0 0 20px rgba(16, 185, 129, 0.4)' : 
+                                   isToday && !isCompleted ? '0 0 20px rgba(244, 63, 94, 0.3)' : 'none'
                       }}
                     />
                   </div>
@@ -415,7 +445,7 @@ export default function HabitDetail() {
           </div>
         </div>
 
-        {/* MONTHLY CALENDAR - Same as Analytics page */}
+        {/* MONTHLY CALENDAR */}
         <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs text-white/30 font-medium">📅 Monthly Progress</h3>
@@ -481,9 +511,9 @@ export default function HabitDetail() {
                       {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })}
                     </span>
                     <span className={`text-sm font-medium ${
-                      entry.status === 'completed' ? 'text-emerald-400' : 'text-white/20'
+                      entry.status === 'completed' ? 'text-emerald-400' : 'text-rose-400'
                     }`}>
-                      {entry.status === 'completed' ? '✅ Done' : '⬜ Missed'}
+                      {entry.status === 'completed' ? '✅ Done' : '❌ Missed'}
                     </span>
                   </div>
                 )
