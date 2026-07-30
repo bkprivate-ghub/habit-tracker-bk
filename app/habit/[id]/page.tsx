@@ -52,6 +52,17 @@ export default function HabitDetail() {
     }
   }, [habitId, currentUser, monthOffset])
 
+  // Refresh data when page comes into focus
+  useEffect(() => {
+    const handleFocus = () => {
+      if (habitId && currentUser) {
+        loadHabitData()
+      }
+    }
+    window.addEventListener('focus', handleFocus)
+    return () => window.removeEventListener('focus', handleFocus)
+  }, [habitId, currentUser])
+
   const loadHabitData = async () => {
     setLoading(true)
 
@@ -155,10 +166,11 @@ export default function HabitDetail() {
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
       const entry = entriesData.find(e => e.date === dateStr)
+      const isCompleted = entry?.status === 'completed'
       weeklyData.push({
         day: date.toLocaleDateString('en-US', { weekday: 'short' }),
         date: dateStr,
-        completed: entry?.status === 'completed' || false,
+        completed: isCompleted || false,
       })
     }
 
@@ -177,12 +189,16 @@ export default function HabitDetail() {
       const dateStr = date.toISOString().split('T')[0]
       const entry = entriesData.find(e => e.date === dateStr)
       const isBeforeCreation = dateStr < createdDateStr
+      const isToday = dateStr === todayStr
+      const isFuture = date > new Date()
+      const isCompleted = entry?.status === 'completed'
+      
       monthData.push({
         day: d,
         date: dateStr,
-        completed: entry?.status === 'completed' || false,
-        isToday: dateStr === todayStr,
-        isFuture: date > new Date(),
+        completed: isCompleted || false,
+        isToday: isToday,
+        isFuture: isFuture,
         isBeforeCreation: isBeforeCreation,
       })
     }
@@ -239,15 +255,15 @@ export default function HabitDetail() {
   // Function to get color for monthly view
   const getMonthlyColor = (day: any) => {
     if (day.isBeforeCreation) {
-      return 'bg-white/5 text-white/20' // Grey for days before creation
+      return 'bg-white/5 text-white/20'
     }
     if (day.isFuture) {
-      return 'text-white/40' // White for future days
+      return 'text-white/40'
     }
     if (day.completed) {
-      return 'bg-emerald-500/30 text-emerald-400 border border-emerald-500/50' // Bright green for done
+      return 'bg-emerald-500/30 text-emerald-400 border border-emerald-500/50'
     }
-    return 'bg-rose-500/20 text-rose-400 border border-rose-500/30' // Bright red for missed
+    return 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
   }
 
   if (loading) {
@@ -374,25 +390,34 @@ export default function HabitDetail() {
           </div>
         </div>
 
-        {/* Weekly Chart */}
+        {/* Weekly Chart - FIXED */}
         <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5 mb-4">
           <h3 className="text-xs text-white/30 font-medium mb-3">📈 Last 7 Days</h3>
           <div className="flex items-end justify-between h-24 gap-1">
-            {stats.weeklyData.map((day, i) => (
-              <div key={i} className="flex-1 flex flex-col items-center">
-                <div
-                  className={`w-full rounded-t-lg transition-all duration-300 ${
-                    day.completed ? 'bg-emerald-500' : 'bg-white/10'
-                  }`}
-                  style={{ height: day.completed ? '80%' : '20%' }}
-                />
-                <span className="text-[8px] text-white/20 mt-1">{day.day}</span>
-              </div>
-            ))}
+            {stats.weeklyData.map((day, i) => {
+              // Determine if today
+              const isToday = day.date === new Date().toISOString().split('T')[0]
+              return (
+                <div key={i} className="flex-1 flex flex-col items-center">
+                  <div
+                    className={`w-full rounded-t-lg transition-all duration-300 ${
+                      day.completed ? 'bg-emerald-500' : 'bg-white/10'
+                    }`}
+                    style={{ 
+                      height: day.completed ? '80%' : '20%',
+                      boxShadow: isToday && day.completed ? '0 0 20px rgba(16, 185, 129, 0.3)' : 'none'
+                    }}
+                  />
+                  <span className={`text-[8px] mt-1 ${isToday ? 'text-indigo-400 font-medium' : 'text-white/20'}`}>
+                    {day.day}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
 
-        {/* Monthly Calendar View - FIXED COLORS */}
+        {/* Monthly Calendar View */}
         <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs text-white/30 font-medium">📅 Monthly View</h3>
@@ -435,7 +460,7 @@ export default function HabitDetail() {
               <span className="w-2 h-2 rounded-full bg-rose-500"></span> Missed
             </span>
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-white/5"></span> Before Habit
+              <span className="w-2 h-2 rounded-full bg-white/5"></span> Before
             </span>
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-white/20"></span> Future
