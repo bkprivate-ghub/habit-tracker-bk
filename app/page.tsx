@@ -700,7 +700,7 @@ export default function Home() {
 
       <div className="max-w-md mx-auto relative z-10">
         
-        {/* HEADER with BIGGER Profile Photo & Icons */}
+        {/* HEADER with Profile Photo & Icons */}
         <div className="animate-fade-up delay-0">
           <div className="flex justify-between items-start mb-6 pt-2">
             <div>
@@ -724,7 +724,7 @@ export default function Home() {
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Profile Photo - BIGGER */}
+              {/* Profile Photo */}
               <Link href="/settings" className="relative block">
                 {currentUser?.avatar_url ? (
                   <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-indigo-500/30 hover:border-indigo-500 transition-all">
@@ -741,7 +741,7 @@ export default function Home() {
                 )}
               </Link>
               
-              {/* Icons - BIGGER */}
+              {/* Icons */}
               <div className="flex gap-0.5 bg-black/40 p-1 rounded-xl border border-white/5">
                 <Link 
                   href="/calendar" 
@@ -850,7 +850,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* HABITS - Clickable to Habit Detail */}
+        {/* HABITS - No Detail Navigation */}
         <div className="mb-3">
           <p className="text-[10px] text-white/30 tracking-widest uppercase font-light">
             Active Habits · {habits.length}
@@ -867,7 +867,8 @@ export default function Home() {
             return (
               <div 
                 key={habit.id}
-                className={`group relative p-4 rounded-2xl transition-all duration-300 border
+                onClick={() => !isToggling && toggleHabit(habit.id)}
+                className={`group relative p-4 rounded-2xl transition-all duration-300 cursor-pointer border
                   ${isDone 
                     ? 'border-emerald-500/20 bg-emerald-500/5' 
                     : 'border-white/5 hover:border-white/10 hover:bg-white/5'
@@ -879,12 +880,7 @@ export default function Home() {
                 style={{ animationDelay: `${index * 0.15}s` }}
               >
                 <div className="flex items-center justify-between">
-                  {/* Clickable habit name - navigates to detail page */}
-                  <Link 
-                    href={`/habit/${habit.id}`}
-                    className="flex items-center gap-3 flex-1"
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <div className="flex items-center gap-3">
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg">{habit.name.split(' ')[0]}</span>
@@ -905,17 +901,9 @@ export default function Home() {
                         </p>
                       )}
                     </div>
-                  </Link>
+                  </div>
                   
-                  {/* Toggle button */}
-                  <div 
-                    className="habit-toggle"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      e.preventDefault()
-                      if (!isToggling) toggleHabit(habit.id)
-                    }}
-                  >
+                  <div className="habit-toggle">
                     <div className={`checkmark ${isDone ? 'completed' : ''}`}>
                       {isDone && (
                         <svg className="check-icon w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
