@@ -20,11 +20,14 @@ export default function HabitDetail() {
     bestStreak: 0,
     totalCompletions: 0,
     totalDays: 0,
-    weeklyData: [] as { day: string; completed: boolean }[],
+    weeklyData: [] as { day: string; date: string; completed: boolean }[],
+    monthlyData: [] as { day: number; date: string; completed: boolean }[],
   })
   const [showEdit, setShowEdit] = useState(false)
   const [editName, setEditName] = useState('')
   const [editEmoji, setEditEmoji] = useState('')
+  const [monthOffset, setMonthOffset] = useState(0)
+  const [currentMonthLabel, setCurrentMonthLabel] = useState('')
 
   const emojis = ['📚', '💪', '📝', '🧴', '💼', '🏃', '🧘', '📖', '🎯', '💡', '🌱', '⭐']
 
@@ -46,7 +49,7 @@ export default function HabitDetail() {
     if (habitId && currentUser) {
       loadHabitData()
     }
-  }, [habitId, currentUser])
+  }, [habitId, currentUser, monthOffset])
 
   const loadHabitData = async () => {
     setLoading(true)
@@ -64,8 +67,12 @@ export default function HabitDetail() {
     }
 
     setHabit(habitData)
-    setEditName(habitData.name)
-    setEditEmoji(habitData.name.charAt(0))
+    // Extract name without emoji for edit
+    const nameParts = habitData.name.split(' ')
+    const emoji = nameParts[0] || '📚'
+    const name = nameParts.slice(1).join(' ')
+    setEditName(name || habitData.name)
+    setEditEmoji(emoji)
 
     const { data: entriesData } = await supabase
       .from('daily_entries')
@@ -85,6 +92,7 @@ export default function HabitDetail() {
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
 
+    // Total days since creation
     let totalDays = 0
     let currentDate = new Date(createdDate)
     currentDate.setHours(0, 0, 0, 0)
@@ -97,6 +105,7 @@ export default function HabitDetail() {
     const totalCompletions = completions.length
     const consistency = totalDays > 0 ? Math.round((totalCompletions / totalDays) * 100) : 0
 
+    // Current streak
     let currentStreak = 0
     let checkDate = new Date()
     checkDate.setHours(0, 0, 0, 0)
@@ -115,6 +124,7 @@ export default function HabitDetail() {
       checkDate.setDate(checkDate.getDate() - 1)
     }
 
+    // Best streak
     let bestStreak = 0
     let tempStreak = 0
     const sortedEntries = [...entriesData]
@@ -139,6 +149,7 @@ export default function HabitDetail() {
     }
     bestStreak = Math.max(bestStreak, tempStreak)
 
+    // Weekly data (last 7 days including today)
     const weeklyData = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
@@ -147,7 +158,33 @@ export default function HabitDetail() {
       const entry = entriesData.find(e => e.date === dateStr)
       weeklyData.push({
         day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-        completed: entry?.status === 'completed',
+        date: dateStr,
+        completed: entry?.status === 'completed' || false,
+      })
+    }
+
+    // Monthly data with offset
+    const monthData = []
+    const todayDate = new Date()
+    const targetMonth = todayDate.getMonth() + monthOffset
+    const targetYear = todayDate.getFullYear()
+    const firstDay = new Date(targetYear, targetMonth, 1)
+    const lastDay = new Date(targetYear, targetMonth + 1, 0)
+    
+    // Set month label
+    setCurrentMonthLabel(firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }))
+
+    // Get entries for this month
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      const date = new Date(targetYear, targetMonth, d)
+      const dateStr = date.toISOString().split('T')[0]
+      const entry = entriesData.find(e => e.date === dateStr)
+      monthData.push({
+        day: d,
+        date: dateStr,
+        completed: entry?.status === 'completed' || false,
+        isToday: dateStr === todayStr,
+        isFuture: date > new Date(),
       })
     }
 
@@ -158,6 +195,7 @@ export default function HabitDetail() {
       totalCompletions,
       totalDays,
       weeklyData,
+      monthlyData: monthData,
     })
   }
 
@@ -173,8 +211,10 @@ export default function HabitDetail() {
     if (!error) {
       setHabit({ ...habit, name: fullName })
       setShowEdit(false)
+      // Reload to refresh stats
+      loadHabitData()
     } else {
-      alert('Error updating habit')
+      alert('Error updating habit: ' + error.message)
     }
   }
 
@@ -192,6 +232,10 @@ export default function HabitDetail() {
 
       router.push('/')
     }
+  }
+
+  const changeMonth = (delta: number) => {
+    setMonthOffset(monthOffset + delta)
   }
 
   if (loading) {
@@ -318,9 +362,9 @@ export default function HabitDetail() {
           </div>
         </div>
 
-        {/* Weekly Chart */}
+        {/* Weekly Chart - FIXED */}
         <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5 mb-4">
-          <h3 className="text-xs text-white/30 font-medium mb-3">Last 7 Days</h3>
+          <h3 className="text-xs text-white/30 font-medium mb-3">📈 Last 7 Days</h3>
           <div className="flex items-end justify-between h-24 gap-1">
             {stats.weeklyData.map((day, i) => (
               <div key={i} className="flex-1 flex flex-col items-center">
@@ -331,6 +375,47 @@ export default function HabitDetail() {
                   style={{ height: day.completed ? '80%' : '20%' }}
                 />
                 <span className="text-[8px] text-white/20 mt-1">{day.day}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Monthly Calendar View - NEW */}
+        <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5 mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs text-white/30 font-medium">📅 Monthly View</h3>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => changeMonth(-1)}
+                className="text-sm p-1 hover:bg-white/5 rounded-lg transition-all text-white/40 hover:text-white/70"
+              >
+                ◀
+              </button>
+              <span className="text-xs text-white/30">{currentMonthLabel}</span>
+              <button
+                onClick={() => changeMonth(1)}
+                className="text-sm p-1 hover:bg-white/5 rounded-lg transition-all text-white/40 hover:text-white/70"
+              >
+                ▶
+              </button>
+            </div>
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, i) => (
+              <div key={i} className="text-center text-[8px] text-white/20 py-1">
+                {day}
+              </div>
+            ))}
+            {stats.monthlyData.map((day, i) => (
+              <div
+                key={i}
+                className={`aspect-square rounded-lg flex items-center justify-center text-xs transition-all
+                  ${day.completed ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-white/20'}
+                  ${day.isToday ? 'ring-1 ring-indigo-400' : ''}
+                  ${day.isFuture ? 'opacity-30' : ''}
+                `}
+              >
+                {day.day}
               </div>
             ))}
           </div>
