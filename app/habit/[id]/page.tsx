@@ -86,12 +86,15 @@ export default function HabitDetail() {
     setEditName(name || habitData.name)
     setEditEmoji(emoji)
 
+    // Get entries for this habit - FIXED to get ALL entries
     const { data: entriesData } = await supabase
       .from('daily_entries')
       .select('*')
       .eq('habit_id', habitId)
       .eq('user_id', currentUser.id)
       .order('date', { ascending: false })
+
+    console.log('Entries loaded:', entriesData) // Debug log
 
     setEntries(entriesData || [])
     calculateStats(habitData, entriesData || [])
@@ -104,6 +107,11 @@ export default function HabitDetail() {
     const createdDateStr = createdDate.toISOString().split('T')[0]
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
+
+    // Debug: Check if today's entry exists
+    const todayEntry = entriesData.find(e => e.date === todayStr)
+    console.log('Today entry:', todayEntry)
+    console.log('Today entry status:', todayEntry?.status)
 
     let totalDays = 0
     let currentDate = new Date(createdDate)
@@ -159,14 +167,18 @@ export default function HabitDetail() {
     }
     bestStreak = Math.max(bestStreak, tempStreak)
 
-    // Weekly data (last 7 days)
+    // Weekly data (last 7 days) - FIXED to properly check completion
     const weeklyData = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
+      // Find entry for this date
       const entry = entriesData.find(e => e.date === dateStr)
       const isCompleted = entry?.status === 'completed'
+      
+      console.log(`Day ${i}: ${dateStr}, Status: ${entry?.status}, Completed: ${isCompleted}`) // Debug
+      
       weeklyData.push({
         day: date.toLocaleDateString('en-US', { weekday: 'short' }),
         date: dateStr,
@@ -395,7 +407,6 @@ export default function HabitDetail() {
           <h3 className="text-xs text-white/30 font-medium mb-3">📈 Last 7 Days</h3>
           <div className="flex items-end justify-between h-24 gap-1">
             {stats.weeklyData.map((day, i) => {
-              // Determine if today
               const isToday = day.date === new Date().toISOString().split('T')[0]
               return (
                 <div key={i} className="flex-1 flex flex-col items-center">
@@ -405,7 +416,7 @@ export default function HabitDetail() {
                     }`}
                     style={{ 
                       height: day.completed ? '80%' : '20%',
-                      boxShadow: isToday && day.completed ? '0 0 20px rgba(16, 185, 129, 0.3)' : 'none'
+                      boxShadow: isToday && day.completed ? '0 0 20px rgba(16, 185, 129, 0.4)' : 'none'
                     }}
                   />
                   <span className={`text-[8px] mt-1 ${isToday ? 'text-indigo-400 font-medium' : 'text-white/20'}`}>
