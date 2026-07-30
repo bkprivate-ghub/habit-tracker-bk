@@ -94,7 +94,7 @@ export default function HabitDetail() {
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
 
-    // Total days since creation (including today)
+    // ===== FIXED: Total days since creation = ALL days from creation to today =====
     let totalDays = 0
     let currentDate = new Date(createdDate)
     currentDate.setHours(0, 0, 0, 0)
@@ -103,11 +103,11 @@ export default function HabitDetail() {
       currentDate.setDate(currentDate.getDate() + 1)
     }
 
-    // Count completions
+    // ===== FIXED: Count completions =====
     const completions = entriesData.filter(e => e.status === 'completed')
     const totalCompletions = completions.length
     
-    // Consistency = completions / total days since creation
+    // ===== FIXED: Consistency = completions / total days since creation =====
     const consistency = totalDays > 0 ? Math.round((totalCompletions / totalDays) * 100) : 0
 
     // Current streak
@@ -189,7 +189,6 @@ export default function HabitDetail() {
       const isFuture = date > new Date()
       const isCompleted = entry?.status === 'completed' || false
       
-      // Determine status for color coding
       let status = 'future'
       if (isBeforeCreation) {
         status = 'before'
@@ -261,7 +260,6 @@ export default function HabitDetail() {
     setMonthOffset(monthOffset + delta)
   }
 
-  // Function to get color for monthly view
   const getMonthlyColor = (day: any) => {
     if (day.status === 'before') {
       return 'bg-white/5 text-white/20'
@@ -410,7 +408,6 @@ export default function HabitDetail() {
               const isToday = day.date === new Date().toISOString().split('T')[0]
               const isCompleted = day.completed
               
-              // Bar color: Green if done, Red if missed (not done)
               let barColor = 'bg-white/10'
               let barHeight = '20%'
               
@@ -418,7 +415,6 @@ export default function HabitDetail() {
                 barColor = 'bg-emerald-500'
                 barHeight = '80%'
               } else {
-                // Missed day - RED
                 barColor = 'bg-rose-500'
                 barHeight = '40%'
               }
