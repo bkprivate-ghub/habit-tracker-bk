@@ -29,27 +29,36 @@ export default function Analytics() {
     { min: 81, max: 100, text: "👑 Legend status. Unstoppable." },
   ]
 
+  // Load habits once on mount
   useEffect(() => {
     loadHabits()
   }, [])
 
+  // Load analytics when habits loaded or selection changes
   useEffect(() => {
     if (habits.length > 0) {
       loadAnalytics()
     }
-  }, [selectedHabitId, weekOffset])
+  }, [selectedHabitId, weekOffset, habits])
 
   const loadHabits = async () => {
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) {
+      setLoading(false)
+      return
+    }
 
     const { data } = await supabase
       .from('habits')
-      .select('*')
+      .select('id, name, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: true })
     
-    if (data) setHabits(data)
+    if (data) {
+      setHabits(data)
+    } else {
+      setLoading(false)
+    }
   }
 
   const loadAnalytics = async () => {
@@ -59,9 +68,7 @@ export default function Analytics() {
     if (!user || habits.length === 0) {
       setLoading(false)
       return
-    }
 
-    // Get the selected habit or all habits
     const habitIds = selectedHabitId === 'all' 
       ? habits.map(h => h.id) 
       : [selectedHabitId]
@@ -69,18 +76,20 @@ export default function Analytics() {
     const totalHabits = selectedHabitId === 'all' ? habits.length : 1
     const today = new Date().toISOString().split('T')[0]
 
-    const ninetyDaysAgo = new Date()
-    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
-    const ninetyDaysAgoStr = ninetyDaysAgo.toISOString().split('T')[0]
+    // Get entries for last 30 days only (faster)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
 
     const { data: entries } = await supabase
       .from('daily_entries')
-      .select('*')
+      .select('habit_id, date, status')
       .in('habit_id', habitIds)
       .eq('user_id', user.id)
-      .gte('date', ninetyDaysAgoStr)
+      .gte('date', thirtyDaysAgoStr)
       .order('date', { ascending: true })
 
+    // Build entries map
     const entriesMap = new Map()
     entries?.forEach((e: any) => {
       if (!entriesMap.has(e.date)) {
@@ -94,7 +103,7 @@ export default function Analytics() {
     const todayCompleted = todayEntries.filter((e: any) => e.status === 'completed').length
     setTodayData({ completed: todayCompleted, total: totalHabits })
 
-    // WEEKLY with offset
+    // WEEKLY
     const todayDate = new Date()
     const currentDay = todayDate.getDay()
     const startOfWeek = new Date(todayDate)
@@ -151,7 +160,7 @@ export default function Analytics() {
     }
     setWeeklyData(weekData)
 
-    // MONTHLY
+    // MONTHLY (last 30 days)
     const monthData = []
     for (let i = 29; i >= 0; i--) {
       const date = new Date()
@@ -210,10 +219,10 @@ export default function Analytics() {
     
     const consistency = totalPossible > 0 ? Math.round((totalCompletions / totalPossible) * 100) : 0
 
-    // Current streak (consecutive days with at least 1 completion)
+    // Current streak
     let currentStreak = 0
     let checkDate = new Date()
-    for (let i = 0; i < 90; i++) {
+    for (let i = 0; i < 30; i++) {
       const dateStr = checkDate.toISOString().split('T')[0]
       const dayEntries = entriesMap.get(dateStr) || []
       const completed = dayEntries.filter((e: any) => e.status === 'completed').length
@@ -226,7 +235,7 @@ export default function Analytics() {
       checkDate.setDate(checkDate.getDate() - 1)
     }
 
-    // Best streak
+    // Best streak (look at all data)
     let bestStreak = 0
     let tempStreak = 0
     const sortedDates = Array.from(entriesMap.keys()).sort()
@@ -260,7 +269,6 @@ export default function Analytics() {
     if (weekOffset < 0) setWeekOffset(weekOffset + 1)
   }
 
-  // Get the selected habit name
   const getSelectedHabitName = () => {
     if (selectedHabitId === 'all') return 'All Habits'
     const habit = habits.find(h => h.id === selectedHabitId)
