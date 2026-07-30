@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter } next/navigation'
 import { supabase } from '../../lib/supabase'
 
 export default function HabitDetail() {
@@ -21,7 +21,7 @@ export default function HabitDetail() {
     totalCompletions: 0,
     totalDays: 0,
     weeklyData: [] as { day: string; date: string; completed: boolean }[],
-    monthlyData: [] as { day: number; date: string; completed: boolean }[],
+    monthlyData: [] as { day: number; date: string; completed: boolean; isToday: boolean; isFuture: boolean }[],
   })
   const [showEdit, setShowEdit] = useState(false)
   const [editName, setEditName] = useState('')
@@ -67,7 +67,6 @@ export default function HabitDetail() {
     }
 
     setHabit(habitData)
-    // Extract name without emoji for edit
     const nameParts = habitData.name.split(' ')
     const emoji = nameParts[0] || '📚'
     const name = nameParts.slice(1).join(' ')
@@ -92,7 +91,6 @@ export default function HabitDetail() {
     const today = new Date()
     const todayStr = today.toISOString().split('T')[0]
 
-    // Total days since creation
     let totalDays = 0
     let currentDate = new Date(createdDate)
     currentDate.setHours(0, 0, 0, 0)
@@ -105,7 +103,6 @@ export default function HabitDetail() {
     const totalCompletions = completions.length
     const consistency = totalDays > 0 ? Math.round((totalCompletions / totalDays) * 100) : 0
 
-    // Current streak
     let currentStreak = 0
     let checkDate = new Date()
     checkDate.setHours(0, 0, 0, 0)
@@ -124,7 +121,6 @@ export default function HabitDetail() {
       checkDate.setDate(checkDate.getDate() - 1)
     }
 
-    // Best streak
     let bestStreak = 0
     let tempStreak = 0
     const sortedEntries = [...entriesData]
@@ -149,7 +145,7 @@ export default function HabitDetail() {
     }
     bestStreak = Math.max(bestStreak, tempStreak)
 
-    // Weekly data (last 7 days including today)
+    // Weekly data
     const weeklyData = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date()
@@ -171,10 +167,8 @@ export default function HabitDetail() {
     const firstDay = new Date(targetYear, targetMonth, 1)
     const lastDay = new Date(targetYear, targetMonth + 1, 0)
     
-    // Set month label
     setCurrentMonthLabel(firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }))
 
-    // Get entries for this month
     for (let d = 1; d <= lastDay.getDate(); d++) {
       const date = new Date(targetYear, targetMonth, d)
       const dateStr = date.toISOString().split('T')[0]
@@ -211,7 +205,6 @@ export default function HabitDetail() {
     if (!error) {
       setHabit({ ...habit, name: fullName })
       setShowEdit(false)
-      // Reload to refresh stats
       loadHabitData()
     } else {
       alert('Error updating habit: ' + error.message)
@@ -362,7 +355,7 @@ export default function HabitDetail() {
           </div>
         </div>
 
-        {/* Weekly Chart - FIXED */}
+        {/* Weekly Chart */}
         <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5 mb-4">
           <h3 className="text-xs text-white/30 font-medium mb-3">📈 Last 7 Days</h3>
           <div className="flex items-end justify-between h-24 gap-1">
@@ -380,7 +373,7 @@ export default function HabitDetail() {
           </div>
         </div>
 
-        {/* Monthly Calendar View - NEW */}
+        {/* Monthly Calendar View */}
         <div className="bg-black/60 backdrop-blur-xl rounded-xl p-4 border border-white/5 mb-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-xs text-white/30 font-medium">📅 Monthly View</h3>
