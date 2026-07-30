@@ -68,6 +68,7 @@ export default function Analytics() {
     if (!user || habits.length === 0) {
       setLoading(false)
       return
+    }
 
     const habitIds = selectedHabitId === 'all' 
       ? habits.map(h => h.id) 
@@ -76,7 +77,6 @@ export default function Analytics() {
     const totalHabits = selectedHabitId === 'all' ? habits.length : 1
     const today = new Date().toISOString().split('T')[0]
 
-    // Get entries for last 30 days only (faster)
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
     const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
@@ -89,7 +89,6 @@ export default function Analytics() {
       .gte('date', thirtyDaysAgoStr)
       .order('date', { ascending: true })
 
-    // Build entries map
     const entriesMap = new Map()
     entries?.forEach((e: any) => {
       if (!entriesMap.has(e.date)) {
@@ -160,7 +159,7 @@ export default function Analytics() {
     }
     setWeeklyData(weekData)
 
-    // MONTHLY (last 30 days)
+    // MONTHLY
     const monthData = []
     for (let i = 29; i >= 0; i--) {
       const date = new Date()
@@ -235,7 +234,7 @@ export default function Analytics() {
       checkDate.setDate(checkDate.getDate() - 1)
     }
 
-    // Best streak (look at all data)
+    // Best streak
     let bestStreak = 0
     let tempStreak = 0
     const sortedDates = Array.from(entriesMap.keys()).sort()
@@ -267,12 +266,6 @@ export default function Analytics() {
   const goToPreviousWeek = () => setWeekOffset(weekOffset - 1)
   const goToNextWeek = () => {
     if (weekOffset < 0) setWeekOffset(weekOffset + 1)
-  }
-
-  const getSelectedHabitName = () => {
-    if (selectedHabitId === 'all') return 'All Habits'
-    const habit = habits.find(h => h.id === selectedHabitId)
-    return habit ? habit.name : 'All Habits'
   }
 
   if (loading) {
