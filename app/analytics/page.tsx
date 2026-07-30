@@ -6,6 +6,8 @@ import { supabase } from '../lib/supabase'
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true)
+  const [habits, setHabits] = useState<any[]>([])
+  const [selectedHabitId, setSelectedHabitId] = useState<string>('all')
   const [todayData, setTodayData] = useState({ completed: 0, total: 0 })
   const [weeklyData, setWeeklyData] = useState<any[]>([])
   const [monthlyData, setMonthlyData] = useState<any[]>([])
@@ -28,22 +30,43 @@ export default function Analytics() {
   ]
 
   useEffect(() => {
-    loadAnalytics()
-  }, [weekOffset])
+    loadHabits()
+  }, [])
+
+  useEffect(() => {
+    if (habits.length > 0) {
+      loadAnalytics()
+    }
+  }, [selectedHabitId, weekOffset])
+
+  const loadHabits = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data } = await supabase
+      .from('habits')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true })
+    
+    if (data) setHabits(data)
+  }
 
   const loadAnalytics = async () => {
     setLoading(true)
 
-    const { data: habits } = await supabase
-      .from('habits')
-      .select('*')
-
-    if (!habits || habits.length === 0) {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || habits.length === 0) {
       setLoading(false)
       return
     }
 
-    const totalHabits = habits.length
+    // Get the selected habit or all habits
+    const habitIds = selectedHabitId === 'all' 
+      ? habits.map(h => h.id) 
+      : [selectedHabitId]
+
+    const totalHabits = selectedHabitId === 'all' ? habits.length : 1
     const today = new Date().toISOString().split('T')[0]
 
     const ninetyDaysAgo = new Date()
@@ -53,6 +76,8 @@ export default function Analytics() {
     const { data: entries } = await supabase
       .from('daily_entries')
       .select('*')
+      .in('habit_id', habitIds)
+      .eq('user_id', user.id)
       .gte('date', ninetyDaysAgoStr)
       .order('date', { ascending: true })
 
@@ -104,6 +129,7 @@ export default function Analytics() {
       
       let habitsThatExisted = 0
       for (const habit of habits) {
+        if (selectedHabitId !== 'all' && habit.id !== selectedHabitId) continue
         const habitCreatedAt = new Date(habit.created_at)
         const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
         if (habitCreatedDate <= dateStr) {
@@ -111,7 +137,7 @@ export default function Analytics() {
         }
       }
       
-      const totalForDay = habitsThatExisted > 0 ? habitsThatExisted : habits.length
+      const totalForDay = habitsThatExisted > 0 ? habitsThatExisted : (selectedHabitId === 'all' ? habits.length : 1)
       
       weekData.push({
         day: dayName,
@@ -136,6 +162,7 @@ export default function Analytics() {
       
       let habitsThatExisted = 0
       for (const habit of habits) {
+        if (selectedHabitId !== 'all' && habit.id !== selectedHabitId) continue
         const habitCreatedAt = new Date(habit.created_at)
         const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
         if (habitCreatedDate <= dateStr) {
@@ -143,7 +170,7 @@ export default function Analytics() {
         }
       }
       
-      const totalForDay = habitsThatExisted > 0 ? habitsThatExisted : habits.length
+      const totalForDay = habitsThatExisted > 0 ? habitsThatExisted : (selectedHabitId === 'all' ? habits.length : 1)
       
       let status = 'missed'
       if (completed === totalForDay && totalForDay > 0) status = 'all-done'
@@ -160,30 +187,27 @@ export default function Analytics() {
     }
     setMonthlyData(monthData)
 
-    // STATS - FIXED
-    // Total Completions = sum of ALL completed habits across ALL days
+    // STATS
     let totalCompletions = 0
     entries?.forEach((e: any) => {
       if (e.status === 'completed') totalCompletions++
     })
 
-    // Consistency = Total Completions / Total Possible Completions × 100
-    // Total Possible = sum of habits that existed on each day
     let totalPossible = 0
     const uniqueDates = Array.from(entriesMap.keys()).sort()
     for (const date of uniqueDates) {
       let habitsThatExisted = 0
       for (const habit of habits) {
+        if (selectedHabitId !== 'all' && habit.id !== selectedHabitId) continue
         const habitCreatedAt = new Date(habit.created_at)
         const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
         if (habitCreatedDate <= date) {
           habitsThatExisted++
         }
       }
-      totalPossible += habitsThatExisted > 0 ? habitsThatExisted : habits.length
+      totalPossible += habitsThatExisted > 0 ? habitsThatExisted : (selectedHabitId === 'all' ? habits.length : 1)
     }
     
-    // If no entries yet, consistency is 0
     const consistency = totalPossible > 0 ? Math.round((totalCompletions / totalPossible) * 100) : 0
 
     // Current streak (consecutive days with at least 1 completion)
@@ -202,7 +226,7 @@ export default function Analytics() {
       checkDate.setDate(checkDate.getDate() - 1)
     }
 
-    // Best streak (consecutive days with at least 1 completion)
+    // Best streak
     let bestStreak = 0
     let tempStreak = 0
     const sortedDates = Array.from(entriesMap.keys()).sort()
@@ -225,7 +249,6 @@ export default function Analytics() {
       consistency,
     })
 
-    // Motivation quote based on consistency
     const quote = motivationalQuotes.find(q => consistency >= q.min && consistency <= q.max)
     setMotivation(quote ? quote.text : "🔥 Your grind starts now. Own it.")
 
@@ -235,6 +258,13 @@ export default function Analytics() {
   const goToPreviousWeek = () => setWeekOffset(weekOffset - 1)
   const goToNextWeek = () => {
     if (weekOffset < 0) setWeekOffset(weekOffset + 1)
+  }
+
+  // Get the selected habit name
+  const getSelectedHabitName = () => {
+    if (selectedHabitId === 'all') return 'All Habits'
+    const habit = habits.find(h => h.id === selectedHabitId)
+    return habit ? habit.name : 'All Habits'
   }
 
   if (loading) {
@@ -251,7 +281,6 @@ export default function Analytics() {
   return (
     <div className="min-h-screen bg-black text-white p-4 pb-20 relative overflow-hidden">
       
-      {/* Subtle Background Glow */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
 
@@ -264,6 +293,26 @@ export default function Analytics() {
             </Link>
             <h1 className="text-2xl font-bold text-white/90">📊 Analytics</h1>
           </div>
+        </div>
+
+        {/* HABIT DROPDOWN FILTER */}
+        <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
+          <label className="text-xs text-white/30 font-medium block mb-2">Select Habit</label>
+          <select
+            value={selectedHabitId}
+            onChange={(e) => {
+              setSelectedHabitId(e.target.value)
+              setWeekOffset(0)
+            }}
+            className="w-full p-3 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-white text-sm appearance-none cursor-pointer"
+          >
+            <option value="all" className="bg-black text-white">📊 All Habits</option>
+            {habits.map((habit) => (
+              <option key={habit.id} value={habit.id} className="bg-black text-white">
+                {habit.name}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* MOTIVATIONAL QUOTE */}
@@ -463,7 +512,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* STATS CARDS - FIXED */}
+        {/* STATS CARDS */}
         <div className="grid grid-cols-2 gap-3">
           <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 text-center">
             <div className="text-2xl font-bold text-orange-400">{stats.bestStreak}d</div>
