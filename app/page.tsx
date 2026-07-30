@@ -724,7 +724,7 @@ export default function Home() {
             </div>
             
             <div className="flex items-center gap-3">
-              {/* Profile Photo - MUCH BIGGER (w-14 h-14) */}
+              {/* Profile Photo - BIGGER */}
               <Link href="/settings" className="relative block">
                 {currentUser?.avatar_url ? (
                   <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-indigo-500/30 hover:border-indigo-500 transition-all">
@@ -741,7 +741,7 @@ export default function Home() {
                 )}
               </Link>
               
-              {/* Icons - BIGGER (w-6 h-6) */}
+              {/* Icons - BIGGER */}
               <div className="flex gap-0.5 bg-black/40 p-1 rounded-xl border border-white/5">
                 <Link 
                   href="/calendar" 
@@ -850,7 +850,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* HABITS */}
+        {/* HABITS - Clickable to Habit Detail */}
         <div className="mb-3">
           <p className="text-[10px] text-white/30 tracking-widest uppercase font-light">
             Active Habits · {habits.length}
@@ -867,11 +867,7 @@ export default function Home() {
             return (
               <div 
                 key={habit.id}
-                onClick={() => !isToggling && toggleHabit(habit.id)}
-                className={`animate-fade-up delay-${delay} transform transition-all duration-300 cursor-pointer`}
-              >
-                <div className={`
-                  bg-black/60 backdrop-blur-xl rounded-xl p-3.5 border transition-all duration-300
+                className={`group relative p-4 rounded-2xl transition-all duration-300 border
                   ${isDone 
                     ? 'border-emerald-500/20 bg-emerald-500/5' 
                     : 'border-white/5 hover:border-white/10 hover:bg-white/5'
@@ -881,41 +877,53 @@ export default function Home() {
                   animate-float-card
                 `}
                 style={{ animationDelay: `${index * 0.15}s` }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{habit.name.split(' ')[0]}</span>
-                          <p className={`text-sm font-medium transition-all duration-300
-                            ${isDone ? 'line-through text-white/30' : 'text-white/80'}
-                          `}>
-                            {habit.name.split(' ').slice(1).join(' ')}
-                          </p>
-                        </div>
-                        {streak > 0 && (
-                          <p className="text-[9px] text-orange-400 font-medium mt-0.5 tracking-wider">
-                            🔥 {streak}d streak
-                          </p>
-                        )}
-                        {streak === 0 && isDone && (
-                          <p className="text-[9px] text-white/30 font-medium mt-0.5 tracking-wider">
-                            ✦ Started today
-                          </p>
-                        )}
+              >
+                <div className="flex items-center justify-between">
+                  {/* Clickable habit name - navigates to detail page */}
+                  <Link 
+                    href={`/habit/${habit.id}`}
+                    className="flex items-center gap-3 flex-1"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{habit.name.split(' ')[0]}</span>
+                        <p className={`text-sm font-medium transition-all duration-300
+                          ${isDone ? 'line-through text-white/30' : 'text-white/80'}
+                        `}>
+                          {habit.name.split(' ').slice(1).join(' ')}
+                        </p>
                       </div>
+                      {streak > 0 && (
+                        <p className="text-[9px] text-orange-400 font-medium mt-0.5 tracking-wider">
+                          🔥 {streak}d streak
+                        </p>
+                      )}
+                      {streak === 0 && isDone && (
+                        <p className="text-[9px] text-white/30 font-medium mt-0.5 tracking-wider">
+                          ✦ Started today
+                        </p>
+                      )}
                     </div>
-                    
-                    <div className="habit-toggle">
-                      <div className={`checkmark ${isDone ? 'completed' : ''}`}>
-                        {isDone && (
-                          <svg className="check-icon w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </div>
-                      {isToggling && <div className="ripple" />}
+                  </Link>
+                  
+                  {/* Toggle button */}
+                  <div 
+                    className="habit-toggle"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      e.preventDefault()
+                      if (!isToggling) toggleHabit(habit.id)
+                    }}
+                  >
+                    <div className={`checkmark ${isDone ? 'completed' : ''}`}>
+                      {isDone && (
+                        <svg className="check-icon w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
                     </div>
+                    {isToggling && <div className="ripple" />}
                   </div>
                 </div>
               </div>
