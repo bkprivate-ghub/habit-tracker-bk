@@ -20,6 +20,7 @@ export default function Analytics() {
   const [motivation, setMotivation] = useState('')
   const [weekOffset, setWeekOffset] = useState(0)
   const [weekLabel, setWeekLabel] = useState('')
+  const [currentUser, setCurrentUser] = useState<any>(null)
 
   const motivationalQuotes = [
     { min: 0, max: 20, text: "🔥 Your grind starts now. Own it." },
@@ -29,32 +30,43 @@ export default function Analytics() {
     { min: 81, max: 100, text: "👑 Legend status. Unstoppable." },
   ]
 
+  // Load user from localStorage
+  useEffect(() => {
+    const savedUser = localStorage.getItem('habitUser')
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser)
+        setCurrentUser(user)
+      } catch (e) {
+        console.error('Error loading user')
+      }
+    }
+  }, [])
+
   // Load habits once on mount
   useEffect(() => {
-    loadHabits()
-  }, [])
+    if (currentUser) {
+      loadHabits()
+    }
+  }, [currentUser])
 
   // Load analytics when habits loaded or selection changes
   useEffect(() => {
-    if (habits.length > 0) {
+    if (habits.length > 0 && currentUser) {
       loadAnalytics()
     }
-  }, [selectedHabitId, weekOffset, habits])
+  }, [selectedHabitId, weekOffset, habits, currentUser])
 
   const loadHabits = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      setLoading(false)
-      return
-    }
+    if (!currentUser) return
 
     const { data } = await supabase
       .from('habits')
       .select('id, name, created_at')
-      .eq('user_id', user.id)
+      .eq('user_id', currentUser.id)
       .order('created_at', { ascending: true })
     
-    if (data) {
+    if (data && data.length > 0) {
       setHabits(data)
     } else {
       setLoading(false)
@@ -64,8 +76,7 @@ export default function Analytics() {
   const loadAnalytics = async () => {
     setLoading(true)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user || habits.length === 0) {
+    if (!currentUser || habits.length === 0) {
       setLoading(false)
       return
     }
@@ -85,10 +96,11 @@ export default function Analytics() {
       .from('daily_entries')
       .select('habit_id, date, status')
       .in('habit_id', habitIds)
-      .eq('user_id', user.id)
+      .eq('user_id', currentUser.id)
       .gte('date', thirtyDaysAgoStr)
       .order('date', { ascending: true })
 
+    // Build entries map
     const entriesMap = new Map()
     entries?.forEach((e: any) => {
       if (!entriesMap.has(e.date)) {
@@ -308,11 +320,15 @@ export default function Analytics() {
             className="w-full p-3 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-white text-sm appearance-none cursor-pointer"
           >
             <option value="all" className="bg-black text-white">📊 All Habits</option>
-            {habits.map((habit) => (
-              <option key={habit.id} value={habit.id} className="bg-black text-white">
-                {habit.name}
-              </option>
-            ))}
+            {habits.length === 0 ? (
+              <option value="" className="bg-black text-white/40">No habits found</option>
+            ) : (
+              habits.map((habit) => (
+                <option key={habit.id} value={habit.id} className="bg-black text-white">
+                  {habit.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
 
@@ -385,68 +401,72 @@ export default function Analytics() {
           </div>
 
           <div className="flex items-end justify-between h-52 gap-1.5 mt-2 px-1">
-            {weeklyData.map((day, i) => {
-              const barHeight = day.hasEntries ? Math.max(day.percentage, 4) : 4
-              const isToday = day.date === new Date().toISOString().split('T')[0]
-              
-              let barColor = 'bg-white/5'
-              let barLabel = '—'
-              let labelColor = 'text-white/20'
-              
-              if (day.isFuture) {
-                barColor = 'bg-white/5'
-                barLabel = '📅'
-                labelColor = 'text-white/10'
-              } else if (day.hasEntries) {
-                if (day.percentage === 100 && day.total > 0) {
-                  barColor = 'bg-emerald-500'
-                  labelColor = 'text-emerald-400'
-                  barLabel = `✅ ${day.completed}/${day.total}`
-                } else if (day.percentage >= 50) {
-                  barColor = 'bg-amber-500'
-                  labelColor = 'text-amber-400'
-                  barLabel = `🟡 ${day.completed}/${day.total}`
-                } else if (day.percentage > 0) {
-                  barColor = 'bg-orange-500'
-                  labelColor = 'text-orange-400'
-                  barLabel = `🟠 ${day.completed}/${day.total}`
-                } else {
-                  barColor = 'bg-rose-500'
-                  labelColor = 'text-rose-400'
-                  barLabel = `❌ ${day.completed}/${day.total}`
+            {weeklyData.length === 0 ? (
+              <div className="w-full text-center text-white/20 py-8 text-sm">No data available</div>
+            ) : (
+              weeklyData.map((day, i) => {
+                const barHeight = day.hasEntries ? Math.max(day.percentage, 4) : 4
+                const isToday = day.date === new Date().toISOString().split('T')[0]
+                
+                let barColor = 'bg-white/5'
+                let barLabel = '—'
+                let labelColor = 'text-white/20'
+                
+                if (day.isFuture) {
+                  barColor = 'bg-white/5'
+                  barLabel = '📅'
+                  labelColor = 'text-white/10'
+                } else if (day.hasEntries) {
+                  if (day.percentage === 100 && day.total > 0) {
+                    barColor = 'bg-emerald-500'
+                    labelColor = 'text-emerald-400'
+                    barLabel = `✅ ${day.completed}/${day.total}`
+                  } else if (day.percentage >= 50) {
+                    barColor = 'bg-amber-500'
+                    labelColor = 'text-amber-400'
+                    barLabel = `🟡 ${day.completed}/${day.total}`
+                  } else if (day.percentage > 0) {
+                    barColor = 'bg-orange-500'
+                    labelColor = 'text-orange-400'
+                    barLabel = `🟠 ${day.completed}/${day.total}`
+                  } else {
+                    barColor = 'bg-rose-500'
+                    labelColor = 'text-rose-400'
+                    barLabel = `❌ ${day.completed}/${day.total}`
+                  }
                 }
-              }
 
-              return (
-                <div key={i} className="flex-1 flex flex-col items-center h-full">
-                  <div className="w-full h-40 relative flex items-end">
-                    <div 
-                      className={`w-full rounded-t-lg transition-all duration-700 ease-out ${barColor}`}
-                      style={{ 
-                        height: `${barHeight}%`,
-                        minHeight: day.hasEntries ? '8px' : '4px',
-                        opacity: day.hasEntries || day.isFuture ? 1 : 0.2
-                      }}
-                    >
-                      {day.hasEntries && barHeight > 30 && day.total > 0 && (
-                        <div className="absolute -top-5 w-full text-center text-[11px] font-bold text-white/60">
-                          {day.percentage}%
-                        </div>
-                      )}
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center h-full">
+                    <div className="w-full h-40 relative flex items-end">
+                      <div 
+                        className={`w-full rounded-t-lg transition-all duration-700 ease-out ${barColor}`}
+                        style={{ 
+                          height: `${barHeight}%`,
+                          minHeight: day.hasEntries ? '8px' : '4px',
+                          opacity: day.hasEntries || day.isFuture ? 1 : 0.2
+                        }}
+                      >
+                        {day.hasEntries && barHeight > 30 && day.total > 0 && (
+                          <div className="absolute -top-5 w-full text-center text-[11px] font-bold text-white/60">
+                            {day.percentage}%
+                          </div>
+                        )}
+                      </div>
                     </div>
+                    
+                    <div className={`text-[9px] font-medium mt-1 ${labelColor} h-3`}>
+                      {barLabel}
+                    </div>
+                    
+                    <span className={`text-xs font-medium mt-1 ${isToday ? 'text-indigo-400 font-bold' : day.isFuture ? 'text-white/20' : 'text-white/40'}`}>
+                      {day.day}
+                      {isToday && ' • Today'}
+                    </span>
                   </div>
-                  
-                  <div className={`text-[9px] font-medium mt-1 ${labelColor} h-3`}>
-                    {barLabel}
-                  </div>
-                  
-                  <span className={`text-xs font-medium mt-1 ${isToday ? 'text-indigo-400 font-bold' : day.isFuture ? 'text-white/20' : 'text-white/40'}`}>
-                    {day.day}
-                    {isToday && ' • Today'}
-                  </span>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
 
           <div className="flex justify-center gap-3 mt-6 text-[10px] text-white/20 flex-wrap">
@@ -475,36 +495,40 @@ export default function Analytics() {
         <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
           <h2 className="text-sm font-semibold text-white/40 mb-3">🗓️ Monthly Progress</h2>
           <div className="grid grid-cols-7 gap-1">
-            {monthlyData.map((day, i) => {
-              let dotColor = 'bg-white/5'
-              let textColor = 'text-white/20'
-              
-              if (day.status === 'all-done') {
-                dotColor = 'bg-emerald-500'
-                textColor = 'text-white'
-              } else if (day.status === 'partial') {
-                dotColor = 'bg-amber-500'
-                textColor = 'text-white'
-              } else if (day.status === 'missed') {
-                dotColor = 'bg-white/5'
-                textColor = 'text-white/20'
-              }
-              
-              return (
-                <div key={i} className="flex flex-col items-center">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${dotColor}`}>
-                    <span className={`text-[10px] font-medium ${textColor}`}>
-                      {day.day}
-                    </span>
+            {monthlyData.length === 0 ? (
+              <div className="col-span-7 text-center text-white/20 py-8 text-sm">No data available</div>
+            ) : (
+              monthlyData.map((day, i) => {
+                let dotColor = 'bg-white/5'
+                let textColor = 'text-white/20'
+                
+                if (day.status === 'all-done') {
+                  dotColor = 'bg-emerald-500'
+                  textColor = 'text-white'
+                } else if (day.status === 'partial') {
+                  dotColor = 'bg-amber-500'
+                  textColor = 'text-white'
+                } else if (day.status === 'missed') {
+                  dotColor = 'bg-white/5'
+                  textColor = 'text-white/20'
+                }
+                
+                return (
+                  <div key={i} className="flex flex-col items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${dotColor}`}>
+                      <span className={`text-[10px] font-medium ${textColor}`}>
+                        {day.day}
+                      </span>
+                    </div>
+                    {day.total > 0 && day.status !== 'future' && (
+                      <span className="text-[6px] text-white/20 mt-0.5">
+                        {day.completed}/{day.total}
+                      </span>
+                    )}
                   </div>
-                  {day.total > 0 && day.status !== 'future' && (
-                    <span className="text-[6px] text-white/20 mt-0.5">
-                      {day.completed}/{day.total}
-                    </span>
-                  )}
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
           <div className="flex justify-center gap-4 mt-3 text-xs text-white/30">
             <span>🟢 All Done</span>
