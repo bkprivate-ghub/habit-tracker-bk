@@ -4,6 +4,14 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 
+// Helper function to get local date string (YYYY-MM-DD)
+const getLocalDateStr = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function Calendar() {
   const [loading, setLoading] = useState(true)
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -37,15 +45,15 @@ export default function Calendar() {
         earliestDate = habitDate
       }
     }
-    const earliestDateStr = earliestDate.toISOString().split('T')[0]
+    const earliestDateStr = getLocalDateStr(earliestDate)
 
     const year = currentDate.getFullYear()
     const month = currentDate.getMonth()
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
     
-    const startStr = firstDay.toISOString().split('T')[0]
-    const endStr = lastDay.toISOString().split('T')[0]
+    const startStr = getLocalDateStr(firstDay)
+    const endStr = getLocalDateStr(lastDay)
 
     const { data: entriesData } = await supabase
       .from('daily_entries')
@@ -71,18 +79,18 @@ export default function Calendar() {
       days.push({ day: null, date: null, status: 'empty' })
     }
     
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateStr(new Date())
     
     for (let d = 1; d <= daysInMonth; d++) {
       const date = new Date(year, month, d)
-      const dateStr = date.toISOString().split('T')[0]
+      const dateStr = getLocalDateStr(date)
       const dayEntries = map.get(dateStr) || []
       const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
       let habitsThatExisted = 0
       for (const habit of habitsData) {
         const habitCreatedAt = new Date(habit.created_at)
-        const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
+        const habitCreatedDate = getLocalDateStr(habitCreatedAt)
         if (habitCreatedDate <= dateStr) {
           habitsThatExisted++
         }
@@ -153,16 +161,15 @@ export default function Calendar() {
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <div className="text-4xl mb-4 animate-pulse text-indigo-400">🗓️</div>
-          <p className="text-gray-500 font-light">Loading calendar...</p>
+          <p className="text-white/40 font-light">Loading calendar...</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-black text-gray-100 p-4 pb-20 relative overflow-hidden">
+    <div className="min-h-screen bg-black text-white p-4 pb-20 relative overflow-hidden">
       
-      {/* Subtle Background Glow */}
       <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl" />
       <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
 
@@ -177,7 +184,6 @@ export default function Calendar() {
           </div>
         </div>
 
-        {/* Month Navigation */}
         <div className="flex items-center justify-between bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
           <button 
             onClick={() => changeMonth(-1)}
@@ -196,7 +202,6 @@ export default function Calendar() {
           </button>
         </div>
 
-        {/* Calendar Grid */}
         <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
           <div className="grid grid-cols-7 gap-1 mb-2">
             {dayNames.map((day, i) => (
@@ -212,7 +217,7 @@ export default function Calendar() {
                 return <div key={i} className="aspect-square"></div>
               }
               
-              const isToday = day.date === new Date().toISOString().split('T')[0]
+              const isToday = day.date === getLocalDateStr(new Date())
               const isSelected = day.date === selectedDay
               
               let bgColor = 'hover:bg-white/5'
@@ -245,13 +250,12 @@ export default function Calendar() {
                   `}
                 >
                   <span className={`text-sm font-medium
-                    ${day.status === 'all-done' ? 'text-emerald-400' : ''}
+                    ${day.status === 'all-done' ? 'text-emerald-400 font-bold' : ''}
                     ${day.status === 'partial' ? 'text-amber-400' : ''}
                     ${day.status === 'missed' ? 'text-rose-400' : ''}
                     ${day.status === 'future' ? 'text-white/30' : ''}
                     ${day.status === 'before' ? 'text-white/20' : ''}
                     ${day.status === 'pending' ? 'text-indigo-400' : ''}
-                    ${day.status === 'all-done' ? 'font-bold' : ''}
                   `}>
                     {day.day}
                   </span>
@@ -281,7 +285,7 @@ export default function Calendar() {
           <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 animate-fade-up">
             <div className="flex justify-between items-center mb-3">
               <h3 className="font-semibold text-white/90">
-                {new Date(selectedDay).toLocaleDateString('en-US', { 
+                {new Date(selectedDay + 'T00:00:00').toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   month: 'long', 
                   day: 'numeric' 
