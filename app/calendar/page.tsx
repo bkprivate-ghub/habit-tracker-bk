@@ -156,6 +156,39 @@ export default function Calendar() {
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+  // Get the CSS classes for a day based on its status
+  const getDayClasses = (day: any, isToday: boolean, isSelected: boolean) => {
+    let bgColor = 'hover:bg-white/5'
+    let borderColor = 'border-transparent'
+    let opacity = 'opacity-100'
+    let textColor = 'text-white/40'
+    let fontWeight = 'font-medium'
+    
+    if (day.status === 'before') {
+      bgColor = 'bg-white/5'
+      opacity = 'opacity-30'
+      textColor = 'text-white/20'
+    } else if (day.status === 'all-done') {
+      bgColor = 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/30'
+      textColor = 'text-emerald-400'
+      fontWeight = 'font-bold'
+    } else if (day.status === 'partial') {
+      bgColor = 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/30'
+      textColor = 'text-amber-400'
+    } else if (day.status === 'missed') {
+      bgColor = 'bg-rose-500/20 hover:bg-rose-500/30 border-rose-500/30'
+      textColor = 'text-rose-400'
+    } else if (day.status === 'pending') {
+      bgColor = 'bg-indigo-500/20 hover:bg-indigo-500/30 border-indigo-500/30'
+      textColor = 'text-indigo-400'
+    } else if (day.status === 'future') {
+      bgColor = 'hover:bg-white/5'
+      textColor = 'text-white/30'
+    }
+    
+    return { bgColor, borderColor, opacity, textColor, fontWeight }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -219,44 +252,21 @@ export default function Calendar() {
               
               const isToday = day.date === getLocalDateStr(new Date())
               const isSelected = day.date === selectedDay
-              
-              let bgColor = 'hover:bg-white/5'
-              let borderColor = 'border-transparent'
-              let opacity = 'opacity-100'
-              
-              if (day.status === 'before') {
-                bgColor = 'opacity-30'
-                opacity = 'opacity-30'
-              } else if (day.status === 'all-done') {
-                bgColor = 'bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/20'
-              } else if (day.status === 'partial') {
-                bgColor = 'bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/20'
-              } else if (day.status === 'missed') {
-                bgColor = 'bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/20'
-              } else if (day.status === 'future') {
-                bgColor = 'hover:bg-white/5'
-              }
+              const classes = getDayClasses(day, isToday, isSelected)
               
               return (
                 <button
                   key={i}
                   onClick={() => handleDayClick(day)}
                   className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all
-                    ${bgColor}
+                    ${classes.bgColor}
                     ${isSelected ? 'ring-2 ring-indigo-400 shadow-lg shadow-indigo-500/10' : ''}
-                    ${isToday ? 'border-2 border-indigo-400' : borderColor}
-                    ${opacity}
+                    ${isToday ? 'border-2 border-indigo-400' : classes.borderColor}
+                    ${classes.opacity}
                     ${day.status !== 'before' && day.status !== 'future' ? 'hover:scale-105' : ''}
                   `}
                 >
-                  <span className={`text-sm font-medium
-                    ${day.status === 'all-done' ? 'text-emerald-400 font-bold' : ''}
-                    ${day.status === 'partial' ? 'text-amber-400' : ''}
-                    ${day.status === 'missed' ? 'text-rose-400' : ''}
-                    ${day.status === 'future' ? 'text-white/30' : ''}
-                    ${day.status === 'before' ? 'text-white/20' : ''}
-                    ${day.status === 'pending' ? 'text-indigo-400' : ''}
-                  `}>
+                  <span className={`text-sm ${classes.textColor} ${classes.fontWeight}`}>
                     {day.day}
                   </span>
                   <span className="text-xs mt-0.5">
