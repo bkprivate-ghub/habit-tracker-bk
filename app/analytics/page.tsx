@@ -4,6 +4,14 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '../lib/supabase'
 
+// Helper function to get local date string (YYYY-MM-DD)
+const getLocalDateStr = (date: Date) => {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export default function Analytics() {
   const [loading, setLoading] = useState(true)
   const [habits, setHabits] = useState<any[]>([])
@@ -86,11 +94,11 @@ export default function Analytics() {
       : [selectedHabitId]
 
     const totalHabits = selectedHabitId === 'all' ? habits.length : 1
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDateStr(new Date())
 
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
+    const thirtyDaysAgoStr = getLocalDateStr(thirtyDaysAgo)
 
     const { data: entries } = await supabase
       .from('daily_entries')
@@ -100,7 +108,6 @@ export default function Analytics() {
       .gte('date', thirtyDaysAgoStr)
       .order('date', { ascending: true })
 
-    // Build entries map
     const entriesMap = new Map()
     entries?.forEach((e: any) => {
       if (!entriesMap.has(e.date)) {
@@ -139,7 +146,7 @@ export default function Analytics() {
     for (let i = 0; i < 7; i++) {
       const date = new Date(startOfWeek)
       date.setDate(startOfWeek.getDate() + i)
-      const dateStr = date.toISOString().split('T')[0]
+      const dateStr = getLocalDateStr(date)
       const dayEntries = entriesMap.get(dateStr) || []
       const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       const dayName = date.toLocaleDateString('en-US', { weekday: 'short' })
@@ -151,7 +158,7 @@ export default function Analytics() {
       for (const habit of habits) {
         if (selectedHabitId !== 'all' && habit.id !== selectedHabitId) continue
         const habitCreatedAt = new Date(habit.created_at)
-        const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
+        const habitCreatedDate = getLocalDateStr(habitCreatedAt)
         if (habitCreatedDate <= dateStr) {
           habitsThatExisted++
         }
@@ -176,7 +183,7 @@ export default function Analytics() {
     for (let i = 29; i >= 0; i--) {
       const date = new Date()
       date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split('T')[0]
+      const dateStr = getLocalDateStr(date)
       const dayEntries = entriesMap.get(dateStr) || []
       const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
@@ -184,7 +191,7 @@ export default function Analytics() {
       for (const habit of habits) {
         if (selectedHabitId !== 'all' && habit.id !== selectedHabitId) continue
         const habitCreatedAt = new Date(habit.created_at)
-        const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
+        const habitCreatedDate = getLocalDateStr(habitCreatedAt)
         if (habitCreatedDate <= dateStr) {
           habitsThatExisted++
         }
@@ -195,6 +202,7 @@ export default function Analytics() {
       let status = 'missed'
       if (completed === totalForDay && totalForDay > 0) status = 'all-done'
       else if (completed > 0) status = 'partial'
+      else status = 'missed'
       
       monthData.push({
         date: dateStr,
@@ -220,7 +228,7 @@ export default function Analytics() {
       for (const habit of habits) {
         if (selectedHabitId !== 'all' && habit.id !== selectedHabitId) continue
         const habitCreatedAt = new Date(habit.created_at)
-        const habitCreatedDate = habitCreatedAt.toISOString().split('T')[0]
+        const habitCreatedDate = getLocalDateStr(habitCreatedAt)
         if (habitCreatedDate <= date) {
           habitsThatExisted++
         }
@@ -234,7 +242,7 @@ export default function Analytics() {
     let currentStreak = 0
     let checkDate = new Date()
     for (let i = 0; i < 30; i++) {
-      const dateStr = checkDate.toISOString().split('T')[0]
+      const dateStr = getLocalDateStr(checkDate)
       const dayEntries = entriesMap.get(dateStr) || []
       const completed = dayEntries.filter((e: any) => e.status === 'completed').length
       
@@ -280,6 +288,20 @@ export default function Analytics() {
     if (weekOffset < 0) setWeekOffset(weekOffset + 1)
   }
 
+  // Get color for monthly heatmap dot
+  const getDotColor = (status: string) => {
+    switch (status) {
+      case 'all-done':
+        return 'bg-emerald-500 text-white'
+      case 'partial':
+        return 'bg-amber-500 text-white'
+      case 'missed':
+        return 'bg-rose-500 text-white'
+      default:
+        return 'bg-white/5 text-white/20'
+    }
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -320,15 +342,11 @@ export default function Analytics() {
             className="w-full p-3 bg-black/50 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400/50 text-white text-sm appearance-none cursor-pointer"
           >
             <option value="all" className="bg-black text-white">📊 All Habits</option>
-            {habits.length === 0 ? (
-              <option value="" className="bg-black text-white/40">No habits found</option>
-            ) : (
-              habits.map((habit) => (
-                <option key={habit.id} value={habit.id} className="bg-black text-white">
-                  {habit.name}
-                </option>
-              ))
-            )}
+            {habits.map((habit) => (
+              <option key={habit.id} value={habit.id} className="bg-black text-white">
+                {habit.name}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -406,7 +424,7 @@ export default function Analytics() {
             ) : (
               weeklyData.map((day, i) => {
                 const barHeight = day.hasEntries ? Math.max(day.percentage, 4) : 4
-                const isToday = day.date === new Date().toISOString().split('T')[0]
+                const isToday = day.date === getLocalDateStr(new Date())
                 
                 let barColor = 'bg-white/5'
                 let barLabel = '—'
@@ -491,7 +509,7 @@ export default function Analytics() {
           </div>
         </div>
 
-        {/* MONTHLY HEATMAP */}
+        {/* MONTHLY HEATMAP - FIXED: Red for Missed */}
         <div className="bg-black/60 backdrop-blur-xl rounded-2xl p-4 border border-white/5 mb-4">
           <h2 className="text-sm font-semibold text-white/40 mb-3">🗓️ Monthly Progress</h2>
           <div className="grid grid-cols-7 gap-1">
@@ -499,24 +517,11 @@ export default function Analytics() {
               <div className="col-span-7 text-center text-white/20 py-8 text-sm">No data available</div>
             ) : (
               monthlyData.map((day, i) => {
-                let dotColor = 'bg-white/5'
-                let textColor = 'text-white/20'
-                
-                if (day.status === 'all-done') {
-                  dotColor = 'bg-emerald-500'
-                  textColor = 'text-white'
-                } else if (day.status === 'partial') {
-                  dotColor = 'bg-amber-500'
-                  textColor = 'text-white'
-                } else if (day.status === 'missed') {
-                  dotColor = 'bg-white/5'
-                  textColor = 'text-white/20'
-                }
-                
+                const dotColor = getDotColor(day.status)
                 return (
                   <div key={i} className="flex flex-col items-center">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs ${dotColor}`}>
-                      <span className={`text-[10px] font-medium ${textColor}`}>
+                      <span className="text-[10px] font-medium">
                         {day.day}
                       </span>
                     </div>
@@ -533,7 +538,7 @@ export default function Analytics() {
           <div className="flex justify-center gap-4 mt-3 text-xs text-white/30">
             <span>🟢 All Done</span>
             <span>🟡 Partial</span>
-            <span>⬜ Missed</span>
+            <span>🔴 Missed</span>
           </div>
         </div>
 
